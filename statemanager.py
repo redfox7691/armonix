@@ -30,15 +30,20 @@ class StateManager(QtCore.QObject):
         self.ledbar.set_animating(self.state == "waiting")
 
     def on_keypad_event(self, scancode, keycode, is_down):
+        if self.verbose:
+            print(f"[DEBUG] Tasto: {keycode}, stato: {is_down}, porta Ketron: {self.ketron_port}")
         # Chiamata dal KeypadListener per ogni tasto premuto/rilasciato
         if self.ketron_port:
-            keypad_midi_callback(keycode, is_down, self.ketron_port)
+            keypad_midi_callback(keycode, is_down, self.ketron_port, self.verbose)
         elif self.verbose:
             print(f"Ricevuto evento da tastierino ma Ketron non collegato.")
 
     def poll_ports(self):
-        fantom = self.find_port("FANTOM-06 07")
-        ketron = self.find_port("MIDI Gadget")
+        fantom_port = self.find_port("FANTOM-06 07")
+        ketron_port = self.find_port("MIDI Gadget")
+
+        self.fantom_port = fantom_port
+        self.ketron_port = ketron_port
 
         # --- Keyboard detection (LED K + listener)
         keypad_present = os.path.exists(self.keypad_device)
@@ -54,7 +59,7 @@ class StateManager(QtCore.QObject):
             self.stop_keypad_listener()
 
         # --- Logica principale per lo stato dei LED
-        if fantom and ketron:
+        if fantom_port and ketron_port:
             if self.state == "waiting":
                 if self.verbose:
                     print("Entrambe le porte MIDI trovate, sistema pronto!")
@@ -89,7 +94,7 @@ class StateManager(QtCore.QObject):
         def midi_cb(scancode, keycode, is_down):
             self.on_keypad_event(scancode, keycode, is_down)
         self.keypad_listener = KeypadListener(
-            self.keypad_device, midi_cb, self.keypad_stop_event
+            self.keypad_device, midi_cb, self.keypad_stop_event, verbose=self.verbose
         )
         self.keypad_listener.start()
         if self.verbose:
