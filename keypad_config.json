@@ -1,0 +1,20 @@
+{
+  "KEY_A": { "type": "FOOTSWITCH", "name": "SUSTAIN" },
+  "KEY_B": { "type": "FOOTSWITCH", "name": "SOFT" },
+  "KEY_C": { "type": "FOOTSWITCH", "name": "SOSTENUTO" },
+  "KEY_D": { "type": "FOOTSWITCH", "name": "ARR.B" },
+  "KEY_E": { "type": "FOOTSWITCH", "name": "ARR.A" },
+  "KEY_F": { "type": "FOOTSWITCH", "name": "ROTOR FAST" },
+  "KEY_G": { "type": "FOOTSWITCH", "name": "BREAK1" },
+  "KEY_H": { "type": "FOOTSWITCH", "name": "VOICEToABCD" },
+  "KEY_I": { "type": "FOOTSWITCH", "name": "DIAL_DOWN" },
+  "KEY_L": { "type": "FOOTSWITCH", "name": "DIAL_UP" },
+  "KEY_M": { "type": "TABS", "name": "PLAYER_A" },
+  "KEY_N": { "type": "TABS", "name": "PLAYER_B" },
+  "KEY_O": { "type": "TABS", "name": "ENTER" },
+  "KEY_P": { "type": "TABS", "name": "EXIT" },
+  "KEY_Q": { "type": "TABS", "name": "MENU" },
+  "KEY_R": { "type": "TABS", "name": "LEAD" },
+  "KEY_S": { "type": "TABS", "name": "LYRIC" },
+  "KEY_T": { "type": "CUSTOM", "name": "MICRO 1 ECHO SWITCH" }
+}
