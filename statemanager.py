@@ -21,7 +21,7 @@ class StateManager(QtCore.QObject):
 
         # Tastierino USB (LED K)
         self.keypad_connected = False
-        self.keypad_device = "/dev/input/event8"  # Modifica se necessario
+        self.keypad_device = "/dev/input/by-id/usb-1189_USB_Composite_Device_CD70134330363235-if01-event-kbd"
         self.keypad_listener = None
         self.keypad_stop_event = threading.Event()
 
