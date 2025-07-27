@@ -8,7 +8,7 @@ def send_sysex_to_ketron(port_name, data_bytes):
     data_bytes: lista di valori interi (senza F0/F7, ci pensa mido)
     """
     msg = mido.Message('sysex', data=data_bytes)
-    with mido.open_output(port_name) as outport:
+    with mido.open_output(port_name, exclusive=False) as outport:
         outport.send(msg)
 
 def sysex_tabs(tab_value, status):

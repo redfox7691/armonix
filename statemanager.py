@@ -1,9 +1,8 @@
 import mido
 import os
 import threading
+from fantom_midi_filter import filter_and_translate_fantom_msg
 from PyQt5 import QtCore
-from keypad_midi_callback import keypad_midi_callback  # Assicurati che sia nel PYTHONPATH
-from keypadlistener import KeypadListener  # Il thread listener che hai già
 
 class StateManager(QtCore.QObject):
     def __init__(self, verbose=False):
@@ -12,6 +11,7 @@ class StateManager(QtCore.QObject):
         self.ledbar = None
         self.fantom_port = None
         self.ketron_port = None
+        self.ble_port = None
         self.state = "waiting"   # 'waiting', 'ready', 'paused'
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.poll_ports)
@@ -25,27 +25,28 @@ class StateManager(QtCore.QObject):
         self.keypad_listener = None
         self.keypad_stop_event = threading.Event()
 
+        # Bluetooth MIDI (LED B)
+        self.ble_connected = False
+        self.ble_listener_thread = None
+        self.ble_listener_stop = None
+
     def set_ledbar(self, ledbar):
         self.ledbar = ledbar
         self.ledbar.set_animating(self.state == "waiting")
 
-    def on_keypad_event(self, scancode, keycode, is_down):
-        if self.verbose:
-            print(f"[DEBUG] Tasto: {keycode}, stato: {is_down}, porta Ketron: {self.ketron_port}")
-        # Chiamata dal KeypadListener per ogni tasto premuto/rilasciato
-        if self.ketron_port:
-            keypad_midi_callback(keycode, is_down, self.ketron_port, self.verbose)
-        elif self.verbose:
-            print(f"Ricevuto evento da tastierino ma Ketron non collegato.")
-
     def poll_ports(self):
         fantom_port = self.find_port("FANTOM-06 07")
         ketron_port = self.find_port("MIDI Gadget")
+        ble_port = self.find_port("Bluetooth")
 
-        self.fantom_port = fantom_port
-        self.ketron_port = ketron_port
+        # Aggiorna variabili di stato MIDI principali
+        if (fantom_port != self.fantom_port) or (ketron_port != self.ketron_port):
+            if self.verbose:
+                print(f"Stato MIDI cambiato: Fantom={'TROVATA' if fantom_port else 'NO'}, Ketron={'TROVATA' if ketron_port else 'NO'}")
+            self.fantom_port = fantom_port
+            self.ketron_port = ketron_port
 
-        # --- Keyboard detection (LED K + listener)
+        # Tastierino USB detection + listener
         keypad_present = os.path.exists(self.keypad_device)
         if keypad_present and not self.keypad_connected:
             self.keypad_connected = True
@@ -58,21 +59,37 @@ class StateManager(QtCore.QObject):
                 print("Tastierino USB scollegato")
             self.stop_keypad_listener()
 
-        # --- Logica principale per lo stato dei LED
-        if fantom_port and ketron_port:
+        # Bluetooth MIDI detection + listener
+        if ble_port and not self.ble_connected:
+            self.ble_port = ble_port
+            self.ble_connected = True
+            if self.verbose:
+                print(f"Dispositivo Bluetooth MIDI trovato: {ble_port}")
+            self.start_ble_listener()
+        elif not ble_port and self.ble_connected:
+            if self.verbose:
+                print("Bluetooth MIDI scollegato")
+            self.ble_connected = False
+            self.ble_port = None
+            self.stop_ble_listener()
+
+        # Aggiorna stato dei LED
+        if self.fantom_port and self.ketron_port:
             if self.state == "waiting":
                 if self.verbose:
                     print("Entrambe le porte MIDI trovate, sistema pronto!")
                 self.state = "ready"
                 if self.ledbar:
                     self.ledbar.set_animating(False)
-                self.led_states = [True, True, self.keypad_connected, False, True]
-            elif self.state == "ready":
-                self.led_states = [True, True, self.keypad_connected, False, True]
+            if self.state == "ready":
+                self.start_fantom_listener()
+                self.led_states = [True, True, self.keypad_connected, self.ble_connected, True]
             elif self.state == "paused":
-                self.led_states = [True, True, self.keypad_connected, False, "red"]
+                self.stop_fantom_listener()
+                self.led_states = [True, True, self.keypad_connected, self.ble_connected, "red"]
         else:
             if self.state != "waiting":
+                self.stop_fantom_listener()
                 if self.verbose:
                     print("Una delle porte MIDI è scollegata: torno in attesa.")
                 self.state = "waiting"
@@ -85,27 +102,6 @@ class StateManager(QtCore.QObject):
 
         if self.ledbar:
             self.ledbar.update()
-
-    def start_keypad_listener(self):
-        if self.keypad_listener and self.keypad_listener.is_alive():
-            return  # Già attivo
-        self.keypad_stop_event.clear()
-        # La callback on_keypad_event riceve (scancode, keycode, is_down)
-        def midi_cb(scancode, keycode, is_down):
-            self.on_keypad_event(scancode, keycode, is_down)
-        self.keypad_listener = KeypadListener(
-            self.keypad_device, midi_cb, self.keypad_stop_event, verbose=self.verbose
-        )
-        self.keypad_listener.start()
-        if self.verbose:
-            print("KeypadListener avviato.")
-
-    def stop_keypad_listener(self):
-        if self.keypad_listener:
-            self.keypad_stop_event.set()
-            self.keypad_listener = None
-            if self.verbose:
-                print("KeypadListener terminato.")
 
     def find_port(self, keyword):
         for port_name in mido.get_input_names():
@@ -131,4 +127,104 @@ class StateManager(QtCore.QObject):
             self.led_states[4] = True
             if self.ledbar:
                 self.ledbar.update()
-        # Negli altri stati il click non ha effetto
+
+    # -------- Tastierino USB methods --------
+    def on_keypad_event(self, scancode, keycode, is_down):
+        if not self.ketron_port:
+            if self.verbose:
+                print("Ricevuto evento da tastierino ma Ketron non collegato.")
+            return
+        # Qui richiama la tua callback
+        from keypad_midi_callback import keypad_midi_callback
+        keypad_midi_callback(keycode, is_down, self.ketron_port, verbose=self.verbose)
+
+    def start_keypad_listener(self):
+        if self.keypad_listener and self.keypad_listener.is_alive():
+            return  # già attivo
+        self.keypad_stop_event.clear()
+        def midi_cb(scancode, keycode, is_down):
+            self.on_keypad_event(scancode, keycode, is_down)
+        from keypadlistener import KeypadListener
+        self.keypad_listener = KeypadListener(
+            self.keypad_device, midi_cb, self.keypad_stop_event, verbose=self.verbose
+        )
+        self.keypad_listener.start()
+        if self.verbose:
+            print("KeypadListener avviato.")
+
+    def stop_keypad_listener(self):
+        if self.keypad_listener:
+            self.keypad_stop_event.set()
+            self.keypad_listener = None
+            if self.verbose:
+                print("KeypadListener terminato.")
+
+    # -------- Bluetooth MIDI methods --------
+    def start_ble_listener(self):
+        if self.ble_listener_thread and self.ble_listener_thread.is_alive():
+            return  # già attivo
+        self.ble_listener_stop = threading.Event()
+
+        def ble_listener():
+            import time
+            try:
+                with mido.open_input(self.ble_port) as port_in, \
+                     mido.open_output(self.ketron_port, exclusive=False) as port_out:
+                    if self.verbose:
+                        print("[BLE] In ascolto sulla porta Bluetooth MIDI.")
+                    for msg in port_in:
+                        if self.ble_listener_stop.is_set():
+                            break
+                        port_out.send(msg)
+                        if self.verbose:
+                            print(f"[BLE] Ricevuto e inoltrato: {msg}")
+            except Exception as e:
+                if self.verbose:
+                    print(f"[BLE] Errore: {e}")
+
+        self.ble_listener_thread = threading.Thread(target=ble_listener, daemon=True)
+        self.ble_listener_thread.start()
+
+    def stop_ble_listener(self):
+        if self.ble_listener_stop:
+            self.ble_listener_stop.set()
+        self.ble_listener_thread = None
+
+    # -------- Fantom MIDI methods --------
+    def start_fantom_listener(self):
+        if hasattr(self, "fantom_listener_thread") and self.fantom_listener_thread and self.fantom_listener_thread.is_alive():
+            return  # già attivo
+        self.fantom_listener_stop = threading.Event()
+        from fantom_midi_filter import filter_and_translate_fantom_msg
+
+        def fantom_listener():
+            print(f"[FANTOM-THREAD] Avvio thread, porta Fantom: {self.fantom_port}, porta Ketron: {self.ketron_port}")
+            try:
+                with mido.open_input(self.fantom_port) as inport, mido.open_output(self.ketron_port, exclusive=False) as outport:
+                    if self.verbose:
+                        print("[FANTOM] In ascolto su Fantom.")
+                    for msg in inport:
+                        if self.fantom_listener_stop.is_set():
+                            break
+                        try:
+                            print(f"[FANTOM-DEBUG] Ricevuto: {msg}")
+                            filter_and_translate_fantom_msg(
+                                msg,
+                                outport.name,
+                                armonix_enabled=(self.state == "ready"),
+                                state=self.state,
+                                verbose=self.verbose
+                            )
+                        except Exception as err:
+                            print("[FANTOM-FILTER] Errore nel filtro:", err)
+            except Exception as e:
+                if self.verbose:
+                    print(f"[FANTOM] Errore: {e}")
+
+        self.fantom_listener_thread = threading.Thread(target=fantom_listener, daemon=True)
+        self.fantom_listener_thread.start()
+
+    def stop_fantom_listener(self):
+        if hasattr(self, "fantom_listener_stop") and self.fantom_listener_stop:
+            self.fantom_listener_stop.set()
+        self.fantom_listener_thread = None

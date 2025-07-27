@@ -2,19 +2,22 @@ import threading
 from evdev import InputDevice, categorize, ecodes
 
 class KeypadListener(threading.Thread):
-    def __init__(self, device_path, midi_callback, stop_event):
+    def __init__(self, device_path, midi_callback, stop_event, verbose=False):
         super().__init__()
         self.device_path = device_path
         self.midi_callback = midi_callback
         self.stop_event = stop_event
+        self.verbose = verbose
 
     def run(self):
         try:
             dev = InputDevice(self.device_path)
-            print(f"[KeypadListener] In ascolto su {self.device_path}")
+            if self.verbose:
+                print(f"[KeypadListener] In ascolto su {self.device_path}")
             for event in dev.read_loop():
                 if self.stop_event.is_set():
-                    print("[KeypadListener] Ricevuto segnale di stop.")
+                    if self.verbose:
+                        print("[KeypadListener] Ricevuto segnale di stop.")
                     break
                 if event.type == ecodes.EV_KEY:
                     key_event = categorize(event)
@@ -22,4 +25,5 @@ class KeypadListener(threading.Thread):
                     # La callback riceve: scancode, keycode (es. "KEY_A"), is_down (bool)
                     self.midi_callback(key_event.scancode, str(key_event.keycode), is_down)
         except Exception as e:
-            print(f"[KeypadListener] Errore: {e}")
+            if self.verbose:
+                print(f"[KeypadListener] Errore: {e}")
