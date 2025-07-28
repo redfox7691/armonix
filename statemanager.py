@@ -198,7 +198,8 @@ class StateManager(QtCore.QObject):
         from fantom_midi_filter import filter_and_translate_fantom_msg
 
         def fantom_listener():
-            print(f"[FANTOM-THREAD] Avvio thread, porta Fantom: {self.fantom_port}, porta Ketron: {self.ketron_port}")
+            if self.verbose:
+                print(f"[FANTOM-THREAD] Avvio thread, porta Fantom: {self.fantom_port}, porta Ketron: {self.ketron_port}")
             try:
                 with mido.open_input(self.fantom_port) as inport, mido.open_output(self.ketron_port, exclusive=False) as outport:
                     if self.verbose:
@@ -207,7 +208,8 @@ class StateManager(QtCore.QObject):
                         if self.fantom_listener_stop.is_set():
                             break
                         try:
-                            print(f"[FANTOM-DEBUG] Ricevuto: {msg}")
+                            if self.verbose:
+                                print(f"[FANTOM-DEBUG] Ricevuto: {msg}")
                             filter_and_translate_fantom_msg(
                                 msg,
                                 outport.name,
