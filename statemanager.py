@@ -112,6 +112,22 @@ class StateManager(QtCore.QObject):
     def get_led_states(self):
         return self.led_states
 
+    def system_pause_on(self):
+        if self.verbose:
+            print("Sistema in pausa.")
+        self.state = "paused"
+        self.led_states[4] = "red"
+        if self.ledbar:
+            self.ledbar.update()
+
+    def system_pause_off(self):
+        if self.verbose:
+            print("Sistema attivo.")
+        self.state = "ready"
+        self.led_states[4] = True
+        if self.ledbar:
+            self.ledbar.update()
+
     def toggle_enabled(self):
         if self.state == "ready":
             self.state = "paused"
@@ -213,6 +229,7 @@ class StateManager(QtCore.QObject):
                             filter_and_translate_fantom_msg(
                                 msg,
                                 outport.name,
+                                self,
                                 armonix_enabled=(self.state == "ready"),
                                 state=self.state,
                                 verbose=self.verbose

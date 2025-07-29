@@ -21,9 +21,12 @@ class KeypadListener(threading.Thread):
                     break
                 if event.type == ecodes.EV_KEY:
                     key_event = categorize(event)
-                    is_down = (key_event.keystate == key_event.key_down)
                     # La callback riceve: scancode, keycode (es. "KEY_A"), is_down (bool)
-                    self.midi_callback(key_event.scancode, str(key_event.keycode), is_down)
+                    # Non dobbiamo prendere l'evento "key_repeat", ci interessano solo up e down
+                    if key_event.keystate == key_event.key_down:
+                        self.midi_callback(key_event.scancode, str(key_event.keycode), is_down=True)
+                    elif key_event.keystate == key_event.key_up:
+                        self.midi_callback(key_event.scancode, str(key_event.keycode), is_down=False)
         except Exception as e:
             if self.verbose:
                 print(f"[KeypadListener] Errore: {e}")

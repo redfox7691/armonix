@@ -13,7 +13,7 @@ import mido
 _last_msb = None
 _last_lsb = None
 
-def filter_and_translate_fantom_msg(msg, ketron_port_name, armonix_enabled=True, state="ready", verbose=False):
+def filter_and_translate_fantom_msg(msg, ketron_port_name, state_manager, armonix_enabled=True, state="ready", verbose=False):
     global _last_msb, _last_lsb
 
     # --- NOTE ON/OFF ---
@@ -54,14 +54,7 @@ def filter_and_translate_fantom_msg(msg, ketron_port_name, armonix_enabled=True,
 
     # --- CONTROL CHANGE ---
     elif msg.type == "control_change" and armonix_enabled:
-        if 0x15 <= msg.control <= 0x25:
-            new_control = msg.control + 81
-            cc_msg = msg.copy(channel=0, control=new_control)
-            with mido.open_output(ketron_port_name, exclusive=False) as outport:
-                outport.send(cc_msg)
-            if verbose:
-                print(f"[FANTOM-FILTER] Slider filtrato e inviato: {cc_msg}")
-        elif msg.control == 0:
+        if msg.control == 0:
             _last_msb = msg.value
             if verbose:
                 print(f"[FANTOM-FILTER] Salvato MSB: {_last_msb}")
@@ -69,24 +62,29 @@ def filter_and_translate_fantom_msg(msg, ketron_port_name, armonix_enabled=True,
             _last_lsb = msg.value
             if verbose:
                 print(f"[FANTOM-FILTER] Salvato LSB: {_last_lsb}")
+        elif 0x15 <= msg.control <= 0x25:
+            new_control = msg.control + 81
+            cc_msg = msg.copy(channel=0, control=new_control)
+            with mido.open_output(ketron_port_name, exclusive=False) as outport:
+                outport.send(cc_msg)
+            if verbose:
+                print(f"[FANTOM-FILTER] Slider filtrato e inviato: {cc_msg}")
         elif msg.control == 40:
-            name = "MICRO 1 ECHO SWITCH"
+            name = "Art. Toggle"
             val = 0x7F if msg.value == 127 else 0x00
-            if name in CUSTOM_SYSEX_LOOKUP:
-                format_list = CUSTOM_SYSEX_LOOKUP[name]["format"]
-                data = sysex_custom(format_list, val)
+            if name in FOOTSWITCH_LOOKUP:
+                data = sysex_footswitch_ext(FOOTSWITCH_LOOKUP[name], val)
                 send_sysex_to_ketron(ketron_port_name, data)
-            if verbose:
-                print(f"[FANTOM-FILTER] S1 (Echo MIC) value={msg.value}")
+                if verbose:
+                    print(f"[FANTOM-FILTER] S1 switch: {name} note={msg}")
         elif msg.control == 41:
-            name = "ALTRO SWITCH"
+            name = "VOICETR.ON/OFF"
             val = 0x7F if msg.value == 127 else 0x00
-            if name in CUSTOM_SYSEX_LOOKUP:
-                format_list = CUSTOM_SYSEX_LOOKUP[name]["format"]
-                data = sysex_custom(format_list, val)
+            if name in FOOTSWITCH_LOOKUP:
+                data = sysex_footswitch_std(FOOTSWITCH_LOOKUP[name], val)
                 send_sysex_to_ketron(ketron_port_name, data)
-            if verbose:
-                print(f"[FANTOM-FILTER] S2 value={msg.value}")
+                if verbose:
+                    print(f"[FANTOM-FILTER] S2 switch: {name} note={msg}")
         else:
             with mido.open_output(ketron_port_name, exclusive=False) as outport:
                 outport.send(msg)
@@ -100,14 +98,32 @@ def filter_and_translate_fantom_msg(msg, ketron_port_name, armonix_enabled=True,
         key = (msb, lsb, msg.program)
         if verbose:
             print(f"[FANTOM-FILTER] Program Change tripletta: MSB={msb}, LSB={lsb}, PC={msg.program}")
-        action_num = program_change_mapping().get(key)
-        if action_num:
-            key_pressed(action_num, ketron_port_name, verbose)
-            if verbose:
-                print(f"[FANTOM-FILTER] Azione {action_num} inviata da program change {key}")
+
+        # --- se sono sul canale 15 attivo e disattivo ---
+        if msg.channel == 15:
+            if (msb == 85 and lsb == 3 and msg.program <= 3):
+                if verbose:
+                    print("[FANTOM-FILTER] Ricevuta attivazione.")
+                state_manager.system_pause_off()
+            else:
+                if verbose:
+                    print("[FANTOM-FILTER] Ricevuta PAUSA")
+                state_manager.system_pause_on()
         else:
-            if verbose:
-                print(f"[FANTOM-FILTER] Program Change {key} non mappato, ignorato")
+            action_num = program_change_mapping().get(key)
+            if action_num:
+                key_pressed(action_num, ketron_port_name, verbose)
+                if verbose:
+                    print(f"[FANTOM-FILTER] Azione {action_num} inviata da program change {key}")
+            else:
+                if verbose:
+                    print(f"[FANTOM-FILTER] Program Change {key} non mappato, ignorato")
+    else:
+        with mido.open_output(ketron_port_name, exclusive=False) as outport:
+            outport.send(msg)
+        if verbose:
+            print(f"[FANTOM-FILTER] msg inalterato: {msg}")
+
 
 # --- HELPERS ---
 
