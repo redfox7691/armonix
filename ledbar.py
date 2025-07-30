@@ -66,4 +66,3 @@ class LedBar(QtWidgets.QWidget):
 
     def set_state_manager(self, sm):
         self.state_manager = sm
-
