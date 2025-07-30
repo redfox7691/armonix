@@ -152,7 +152,8 @@ class StateManager(QtCore.QObject):
             return
         # Qui richiama la tua callback
         from keypad_midi_callback import keypad_midi_callback
-        keypad_midi_callback(keycode, is_down, self.ketron_port, verbose=self.verbose)
+        with mido.open_output(self.ketron_port, exclusive=False) as outport:
+            keypad_midi_callback(keycode, is_down, outport, verbose=self.verbose)
 
     def start_keypad_listener(self):
         if self.keypad_listener and self.keypad_listener.is_alive():
@@ -228,7 +229,7 @@ class StateManager(QtCore.QObject):
                                 print(f"[FANTOM-DEBUG] Ricevuto: {msg}")
                             filter_and_translate_fantom_msg(
                                 msg,
-                                outport.name,
+                                outport,
                                 self,
                                 armonix_enabled=(self.state == "ready"),
                                 state=self.state,

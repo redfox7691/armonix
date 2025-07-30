@@ -3,7 +3,13 @@ import os
 from tabs_lookup import TABS_LOOKUP
 from footswitch_lookup import FOOTSWITCH_LOOKUP
 from custom_sysex_lookup import CUSTOM_SYSEX_LOOKUP
-from sysex_utils import send_sysex_to_ketron, sysex_tabs, sysex_footswitch_std, sysex_footswitch_ext, sysex_custom
+from sysex_utils import (
+    send_sysex_to_ketron,
+    sysex_tabs,
+    sysex_footswitch_std,
+    sysex_footswitch_ext,
+    sysex_custom,
+)
 
 # Path assoluto della cartella dove si trova QUESTO script
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -14,7 +20,7 @@ json_path = os.path.join(base_dir, "keypad_config.json")
 with open(json_path) as f:
     KEYPAD_CONFIG = json.load(f)
 
-def keypad_midi_callback(keycode, is_down, ketron_port_name, verbose=False):
+def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
     mapping = KEYPAD_CONFIG.get(keycode)
     if not mapping:
         if verbose:
@@ -67,4 +73,4 @@ def keypad_midi_callback(keycode, is_down, ketron_port_name, verbose=False):
 
     # Invia il sysex (solo se tutto è corretto)
     if data_bytes:
-        send_sysex_to_ketron(ketron_port_name, data_bytes)
+        send_sysex_to_ketron(ketron_outport, data_bytes)
