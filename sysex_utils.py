@@ -2,14 +2,10 @@
 
 import mido
 
-def send_sysex_to_ketron(port_name, data_bytes):
-    """
-    Invia un messaggio Sysex al Ketron tramite la porta MIDI indicata.
-    data_bytes: lista di valori interi (senza F0/F7, ci pensa mido)
-    """
-    msg = mido.Message('sysex', data=data_bytes)
-    with mido.open_output(port_name, exclusive=False) as outport:
-        outport.send(msg)
+def send_sysex_to_ketron(outport, data_bytes):
+    """Invia un messaggio Sysex al Ketron tramite la porta MIDI aperta."""
+    msg = mido.Message("sysex", data=data_bytes)
+    outport.send(msg)
 
 def sysex_tabs(tab_value, status):
     """
