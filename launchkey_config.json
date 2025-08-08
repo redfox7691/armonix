@@ -1,0 +1,8 @@
+{
+  "NOTE_60": { "type": "FOOTSWITCH", "name": "START/STOP" },
+  "NOTE_61": { "type": "FOOTSWITCH", "name": "ARR.A" },
+  "CC_20": { "type": "FOOTSWITCH", "name": "TEMPO UP" },
+  "CC_21": { "type": "FOOTSWITCH", "name": "TEMPO DOWN" },
+  "CC_22": { "type": "TABS", "name": "PAUSE" }
+}
+
