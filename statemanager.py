@@ -54,7 +54,7 @@ class StateManager(QtCore.QObject):
         ketron_port = self.find_port("MIDI Gadget")
         ble_port = self.find_port("Bluetooth")
         daw_in_port = self.find_port("Launchkey MK3 88 LKMK3 DAW In")
-        daw_out_port = self.find_output_port("Launchkey MK3 88 LKMK3 DAW Out")
+        daw_out_port = self.find_output_port("Launchkey MK3 88 LKMK3 DAW In")
 
         # Aggiorna variabili di stato MIDI principali
         if (master_port != self.master_port) or (ketron_port != self.ketron_port):
