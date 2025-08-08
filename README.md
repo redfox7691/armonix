@@ -37,9 +37,29 @@ Sono inclusi due script di utilità:
 - `start_immortal.sh` esegue `main.py` in loop e riavvia automaticamente il programma in caso di uscita.
 - `start-touchdesk.sh` prova a collegarsi via VNC al Ketron EVM quando viene rilevata la rete corretta.
 
+### Opzione `--master`
+
+Il programma accetta l'opzione `--master` per selezionare quale tastiera agisce da controller principale.
+Le scelte disponibili sono `fantom` e `launchkey`; il valore predefinito è `fantom`.
+Esempio d'uso:
+
+```bash
+python main.py --master launchkey
+```
+
 ## Configurazione del tastierino
 
 Il file `keypad_config.json` definisce la mappatura tra i tasti del tastierino e i messaggi Sysex o Footswitch da inviare al Ketron. È possibile modificare questo file per adattare i comandi alle proprie esigenze.
+
+## Modulo Launchkey
+
+Per utilizzare un controller Novation Launchkey come master, definire le mappature nel file `launchkey_config.json`.
+Il file contiene l'associazione tra pad/manopole del Launchkey e i comandi da inviare al Ketron.
+Una volta configurato, avviare il programma con:
+
+```bash
+python main.py --master launchkey
+```
 
 ## Adattamenti ad altri setup
 

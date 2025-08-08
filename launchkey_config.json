@@ -1,0 +1,4 @@
+{
+  "PAD1": { "type": "FOOTSWITCH", "name": "START/STOP" },
+  "PAD2": { "type": "FOOTSWITCH", "name": "TEMPO UP" }
+}
