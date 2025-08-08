@@ -32,6 +32,12 @@ Il programma principale è `main.py` e mostra una piccola barra LED di stato. Pe
 python main.py --verbose
 ```
 
+La tastiera master da utilizzare può essere specificata con l'opzione `--master`. I valori supportati sono `fantom` (predefinito) e `launchkey`.
+
+```bash
+python main.py --master launchkey
+```
+
 Sono inclusi due script di utilità:
 
 - `start_immortal.sh` esegue `main.py` in loop e riavvia automaticamente il programma in caso di uscita.
@@ -40,6 +46,13 @@ Sono inclusi due script di utilità:
 ## Configurazione del tastierino
 
 Il file `keypad_config.json` definisce la mappatura tra i tasti del tastierino e i messaggi Sysex o Footswitch da inviare al Ketron. È possibile modificare questo file per adattare i comandi alle proprie esigenze.
+
+## Configurazione della Launchkey
+
+Per utilizzare una Novation Launchkey come tastiera master:
+
+1. Collegare la tastiera al computer tramite USB e attivare la modalità `Custom`/`DAW` secondo le istruzioni del produttore.
+2. Personalizzare le mappature nel file `launchkey_config.json` se si desidera modificare i controlli di default.
 
 ## Adattamenti ad altri setup
 
