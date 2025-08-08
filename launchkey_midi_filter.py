@@ -57,7 +57,20 @@ LAUNCHKEY_FILTERS = _load_launchkey_filters(_config_path)
 
 # --- Master port filter ---------------------------------------------------
 
-def filter_and_translate_launchkey_msg(msg, ketron_outport, state_manager, armonix_enabled=True, state="ready", verbose=False):
+def filter_and_translate_launchkey_msg(
+    msg, ketron_outport, state_manager, armonix_enabled=True, state="ready", verbose=False
+):
+    """
+    Forward Launchkey messages to the Ketron only when they are on MIDI channel 1
+    (mido channel 0). Messages on other channels are ignored, optionally logging
+    the event when ``verbose`` is enabled.
+    """
+
+    if msg.channel != 0:
+        if verbose:
+            print(f"[LAUNCHKEY-FILTER] Ignorato canale {msg.channel}: {msg}")
+        return
+
     if armonix_enabled:
         ketron_outport.send(msg)
         if verbose:
