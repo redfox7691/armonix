@@ -160,7 +160,7 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                         )
             elif rtype == "CC" and "newval" in rule:
                 _ketron_outport.send(msg)
-                dup_msg = msg.copy(control=rule["newval"])
+                dup_msg = msg.copy(control=rule["newval"], channel=0)
                 _ketron_outport.send(dup_msg)
                 if verbose:
                     print(
