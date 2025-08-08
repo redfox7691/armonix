@@ -37,6 +37,18 @@ Sono inclusi due script di utilità:
 - `start_immortal.sh` esegue `main.py` in loop e riavvia automaticamente il programma in caso di uscita.
 - `start-touchdesk.sh` prova a collegarsi via VNC al Ketron EVM quando viene rilevata la rete corretta.
 
+## Test manuali
+
+Per verificare il corretto filtraggio dei messaggi della Launchkey, è disponibile
+uno script di test manuale:
+
+```bash
+python tests/manual_launchkey_filter.py
+```
+
+Questo script conferma che solo i messaggi sul canale 1 (canale 0 per mido)
+vengono inoltrati al Ketron, mentre gli altri vengono scartati.
+
 ## Configurazione del tastierino
 
 Il file `keypad_config.json` definisce la mappatura tra i tasti del tastierino e i messaggi Sysex o Footswitch da inviare al Ketron. È possibile modificare questo file per adattare i comandi alle proprie esigenze.
