@@ -41,6 +41,20 @@ Sono inclusi due script di utilità:
 
 Il file `keypad_config.json` definisce la mappatura tra i tasti del tastierino e i messaggi Sysex o Footswitch da inviare al Ketron. È possibile modificare questo file per adattare i comandi alle proprie esigenze.
 
+## Configurazione della Launchkey
+
+Il file `launchkey_config.json` permette di associare i messaggi MIDI generati dalla Novation Launchkey ai comandi del Ketron. La struttura è la seguente:
+
+```
+{
+  "footswitch": {"<nota>": "<nome FOOTSWITCH>"},
+  "tabs": {"<nota>": "<nome TABS>"},
+  "program_change": {"MSB,LSB,PC": <azione>}
+}
+```
+
+Le stringhe devono corrispondere ai simboli definiti in `footswitch_lookup.py` e `tabs_lookup.py`. Le triple `MSB,LSB,PC` identificano un Program Change che il filtro MIDI può tradurre in un'azione specifica.
+
 ## Adattamenti ad altri setup
 
 La logica è suddivisa in moduli (gestione dello stato, filtro MIDI, listener per il tastierino), rendendo relativamente semplice l'estensione a strumenti o controller diversi. Basterà modificare le mappature e, se necessario, aggiungere nuovi filtri MIDI.

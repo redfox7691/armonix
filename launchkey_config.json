@@ -1,0 +1,12 @@
+{
+  "footswitch": {
+    "60": "ARR.A",
+    "61": "BREAK"
+  },
+  "tabs": {
+    "62": "HOLD"
+  },
+  "program_change": {
+    "105,0,127": 1
+  }
+}
