@@ -1,8 +1,13 @@
 import mido
 import os
 import threading
-from fantom_midi_filter import filter_and_translate_fantom_msg
+import importlib
 from PyQt5 import QtCore
+
+MASTER_PORT_KEYWORDS = {
+    "fantom": "FANTOM-06 07",
+    "launchkey": "Launchkey",
+}
 
 class StateManager(QtCore.QObject):
     def __init__(self, master='fantom', verbose=False):
@@ -10,7 +15,7 @@ class StateManager(QtCore.QObject):
         self.master = master
         self.verbose = verbose
         self.ledbar = None
-        self.fantom_port = None
+        self.master_port = None
         self.ketron_port = None
         self.ble_port = None
         self.state = "waiting"   # 'waiting', 'ready', 'paused'
@@ -36,15 +41,16 @@ class StateManager(QtCore.QObject):
         self.ledbar.set_animating(self.state == "waiting")
 
     def poll_ports(self):
-        fantom_port = self.find_port("FANTOM-06 07")
+        master_keyword = MASTER_PORT_KEYWORDS.get(self.master)
+        master_port = self.find_port(master_keyword) if master_keyword else None
         ketron_port = self.find_port("MIDI Gadget")
         ble_port = self.find_port("Bluetooth")
 
         # Aggiorna variabili di stato MIDI principali
-        if (fantom_port != self.fantom_port) or (ketron_port != self.ketron_port):
+        if (master_port != self.master_port) or (ketron_port != self.ketron_port):
             if self.verbose:
-                print(f"Stato MIDI cambiato: Fantom={'TROVATA' if fantom_port else 'NO'}, Ketron={'TROVATA' if ketron_port else 'NO'}")
-            self.fantom_port = fantom_port
+                print(f"Stato MIDI cambiato: Master={'TROVATA' if master_port else 'NO'}, Ketron={'TROVATA' if ketron_port else 'NO'}")
+            self.master_port = master_port
             self.ketron_port = ketron_port
 
         # Tastierino USB detection + listener
@@ -75,7 +81,7 @@ class StateManager(QtCore.QObject):
             self.stop_ble_listener()
 
         # Aggiorna stato dei LED
-        if self.fantom_port and self.ketron_port:
+        if self.master_port and self.ketron_port:
             if self.state == "waiting":
                 if self.verbose:
                     print("Entrambe le porte MIDI trovate, sistema pronto!")
@@ -83,14 +89,14 @@ class StateManager(QtCore.QObject):
                 if self.ledbar:
                     self.ledbar.set_animating(False)
             if self.state == "ready":
-                self.start_fantom_listener()
+                self.start_master_listener()
                 self.led_states = [True, True, self.keypad_connected, self.ble_connected, True]
             elif self.state == "paused":
-                self.stop_fantom_listener()
+                self.stop_master_listener()
                 self.led_states = [True, True, self.keypad_connected, self.ble_connected, "red"]
         else:
             if self.state != "waiting":
-                self.stop_fantom_listener()
+                self.stop_master_listener()
                 if self.verbose:
                     print("Una delle porte MIDI è scollegata: torno in attesa.")
                 self.state = "waiting"
@@ -208,27 +214,35 @@ class StateManager(QtCore.QObject):
             self.ble_listener_stop.set()
         self.ble_listener_thread = None
 
-    # -------- Fantom MIDI methods --------
-    def start_fantom_listener(self):
-        if hasattr(self, "fantom_listener_thread") and self.fantom_listener_thread and self.fantom_listener_thread.is_alive():
+    # -------- Master MIDI methods --------
+    def start_master_listener(self):
+        if hasattr(self, "master_listener_thread") and self.master_listener_thread and self.master_listener_thread.is_alive():
             return  # già attivo
-        self.fantom_listener_stop = threading.Event()
-        from fantom_midi_filter import filter_and_translate_fantom_msg
-
-        def fantom_listener():
+        self.master_listener_stop = threading.Event()
+        try:
+            module = importlib.import_module(f"{self.master}_midi_filter")
+            filter_fn = getattr(module, f"filter_and_translate_{self.master}_msg", None)
+            if filter_fn is None:
+                filter_fn = getattr(module, "filter_and_translate_msg")
+        except Exception as e:
             if self.verbose:
-                print(f"[FANTOM-THREAD] Avvio thread, porta Fantom: {self.fantom_port}, porta Ketron: {self.ketron_port}")
+                print(f"[MASTER] Impossibile importare filtro per '{self.master}': {e}")
+            return
+
+        def master_listener():
+            if self.verbose:
+                print(f"[MASTER-THREAD] Avvio thread, porta Master: {self.master_port}, porta Ketron: {self.ketron_port}")
             try:
-                with mido.open_input(self.fantom_port) as inport, mido.open_output(self.ketron_port, exclusive=False) as outport:
+                with mido.open_input(self.master_port) as inport, mido.open_output(self.ketron_port, exclusive=False) as outport:
                     if self.verbose:
-                        print("[FANTOM] In ascolto su Fantom.")
+                        print("[MASTER] In ascolto sul Master.")
                     for msg in inport:
-                        if self.fantom_listener_stop.is_set():
+                        if self.master_listener_stop.is_set():
                             break
                         try:
                             if self.verbose:
-                                print(f"[FANTOM-DEBUG] Ricevuto: {msg}")
-                            filter_and_translate_fantom_msg(
+                                print(f"[MASTER-DEBUG] Ricevuto: {msg}")
+                            filter_fn(
                                 msg,
                                 outport,
                                 self,
@@ -237,15 +251,15 @@ class StateManager(QtCore.QObject):
                                 verbose=self.verbose
                             )
                         except Exception as err:
-                            print("[FANTOM-FILTER] Errore nel filtro:", err)
+                            print("[MASTER-FILTER] Errore nel filtro:", err)
             except Exception as e:
                 if self.verbose:
-                    print(f"[FANTOM] Errore: {e}")
+                    print(f"[MASTER] Errore: {e}")
 
-        self.fantom_listener_thread = threading.Thread(target=fantom_listener, daemon=True)
-        self.fantom_listener_thread.start()
+        self.master_listener_thread = threading.Thread(target=master_listener, daemon=True)
+        self.master_listener_thread.start()
 
-    def stop_fantom_listener(self):
-        if hasattr(self, "fantom_listener_stop") and self.fantom_listener_stop:
-            self.fantom_listener_stop.set()
-        self.fantom_listener_thread = None
+    def stop_master_listener(self):
+        if hasattr(self, "master_listener_stop") and self.master_listener_stop:
+            self.master_listener_stop.set()
+        self.master_listener_thread = None
