@@ -1,1 +1,23 @@
-{}
+// launchkey_config.json
+// Regole di filtraggio e traduzione per la porta DAW del Launchkey.
+// Ogni voce descrive come trasformare NOTE o CC in azioni Ketron.
+// Campi delle voci:
+//   type   -> tipo di messaggio da intercettare ("NOTE" oppure "CC").
+//   val    -> numero della nota o del control change da filtrare.
+//   ch     -> canale MIDI (1-16) su cui ascoltare il messaggio.
+//   name   -> nome simbolico dell'azione associata.
+//   newval -> (opzionale) nuovo numero di CC da inviare, mantenendo il value originale.
+// Esempi:
+// [
+//   { "type": "NOTE", "val": 112, "ch": 1, "action": "FOOTSWITCH", "name": "STYLE VOICE 1" },
+//   { "type": "CC",   "val": 22,  "ch": 15, "action": "FOOTSWITCH", "name": "keytune 1" },
+//   { "type": "CC",   "val": 53,  "ch": 15, "action": "CC", "newval": 0x68, "name": "Drum" }
+// ]
+{
+  "NOTE": [
+    // Inserire qui le regole NOTE
+  ],
+  "CC": [
+    // Inserire qui le regole CC
+  ]
+}
