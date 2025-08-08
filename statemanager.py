@@ -5,8 +5,9 @@ from fantom_midi_filter import filter_and_translate_fantom_msg
 from PyQt5 import QtCore
 
 class StateManager(QtCore.QObject):
-    def __init__(self, verbose=False):
+    def __init__(self, master='fantom', verbose=False):
         super().__init__()
+        self.master = master
         self.verbose = verbose
         self.ledbar = None
         self.fantom_port = None
