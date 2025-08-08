@@ -1,0 +1,9 @@
+{
+  "notes": {
+    "60": {"type": "FOOTSWITCH", "name": "START/STOP"},
+    "61": {"type": "TABS", "name": "HOLD"}
+  },
+  "controls": {
+    "21": {"type": "CUSTOM", "name": "MICRO 1 ECHO SWITCH"}
+  }
+}
