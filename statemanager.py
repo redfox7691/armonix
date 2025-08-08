@@ -2,7 +2,10 @@ import mido
 import os
 import threading
 from fantom_midi_filter import filter_and_translate_fantom_msg
-from launchkey_midi_filter import filter_and_translate_launchkey_msg
+from launchkey_midi_filter import (
+    filter_and_translate_launchkey_msg,
+    filter_and_translate_launchkey_daw_msg,
+)
 from PyQt5 import QtCore
 
 class StateManager(QtCore.QObject):
@@ -32,6 +35,13 @@ class StateManager(QtCore.QObject):
         self.ble_listener_thread = None
         self.ble_listener_stop = None
 
+        # Porta DAW del Launchkey
+        self.daw_connected = False
+        self.daw_in_port = None
+        self.daw_out_port = None
+        self.daw_listener_thread = None
+        self.daw_listener_stop = None
+
     def set_ledbar(self, ledbar):
         self.ledbar = ledbar
         self.ledbar.set_animating(self.state == "waiting")
@@ -43,6 +53,8 @@ class StateManager(QtCore.QObject):
             master_port = self.find_port("Launchkey MK3 88 LKMK3 MIDI In")
         ketron_port = self.find_port("MIDI Gadget")
         ble_port = self.find_port("Bluetooth")
+        daw_in_port = self.find_port("Launchkey MK3 88 LKMK3 DAW In")
+        daw_out_port = self.find_output_port("Launchkey MK3 88 LKMK3 DAW Out")
 
         # Aggiorna variabili di stato MIDI principali
         if (master_port != self.master_port) or (ketron_port != self.ketron_port):
@@ -78,6 +90,22 @@ class StateManager(QtCore.QObject):
             self.ble_port = None
             self.stop_ble_listener()
 
+        # Launchkey DAW port detection + listener
+        if daw_in_port and daw_out_port and not self.daw_connected:
+            self.daw_in_port = daw_in_port
+            self.daw_out_port = daw_out_port
+            self.daw_connected = True
+            if self.verbose:
+                print(f"Porta DAW collegata: in={daw_in_port}, out={daw_out_port}")
+            self.start_daw_listener()
+        elif self.daw_connected and (not daw_in_port or not daw_out_port):
+            if self.verbose:
+                print("Porta DAW scollegata")
+            self.daw_connected = False
+            self.daw_in_port = None
+            self.daw_out_port = None
+            self.stop_daw_listener()
+
         # Aggiorna stato dei LED
         if self.master_port and self.ketron_port:
             if self.state == "waiting":
@@ -110,6 +138,12 @@ class StateManager(QtCore.QObject):
 
     def find_port(self, keyword):
         for port_name in mido.get_input_names():
+            if keyword in port_name:
+                return port_name
+        return None
+
+    def find_output_port(self, keyword):
+        for port_name in mido.get_output_names():
             if keyword in port_name:
                 return port_name
         return None
@@ -211,6 +245,40 @@ class StateManager(QtCore.QObject):
         if self.ble_listener_stop:
             self.ble_listener_stop.set()
         self.ble_listener_thread = None
+
+    # -------- DAW MIDI methods --------
+    def start_daw_listener(self):
+        if self.daw_listener_thread and self.daw_listener_thread.is_alive():
+            return  # già attivo
+        self.daw_listener_stop = threading.Event()
+
+        def daw_listener():
+            if self.verbose:
+                print(f"[DAW-THREAD] Avvio thread: porta DAW in={self.daw_in_port}, out={self.daw_out_port}")
+            try:
+                with mido.open_input(self.daw_in_port) as inport, mido.open_output(self.daw_out_port, exclusive=False) as outport:
+                    for note in (0x0C, 0x0B, 0x0A):
+                        init_msg = mido.Message('note_on', channel=15, note=note, velocity=0x7F)
+                        outport.send(init_msg)
+                        if self.verbose:
+                            print(f"[DAW] Inviato init: {init_msg}")
+                    if self.verbose:
+                        print("[DAW] In ascolto sulla porta DAW.")
+                    for msg in inport:
+                        if self.daw_listener_stop.is_set():
+                            break
+                        filter_and_translate_launchkey_daw_msg(msg, outport, self, verbose=self.verbose)
+            except Exception as e:
+                if self.verbose:
+                    print(f"[DAW] Errore: {e}")
+
+        self.daw_listener_thread = threading.Thread(target=daw_listener, daemon=True)
+        self.daw_listener_thread.start()
+
+    def stop_daw_listener(self):
+        if self.daw_listener_stop:
+            self.daw_listener_stop.set()
+        self.daw_listener_thread = None
 
     # -------- Master MIDI methods --------
     def start_master_listener(self):
