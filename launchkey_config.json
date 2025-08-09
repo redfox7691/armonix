@@ -16,19 +16,19 @@
     { "control": 106,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE UP", "color": 56 },
     { "control": 107,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE DOWN", "color": 56 },
     { "control": 37,   "channel": 15,  "type": "FOOTSWITCH", "name": "Drum Mute", "color": 72 },
-    { "control": 53,   "channel": 15,  "type": "CC", "newval": 104, "name": "Drum" },
+    { "control": 53,   "channel": 15,  "type": "CC", "newval": 104, "name": "Drum", "lcd_index": 80 },
     { "control": 38,   "channel": 15,  "type": "FOOTSWITCH", "name": "Bass Mute", "color": 81 },
-    { "control": 54,   "channel": 15,  "type": "CC", "newval": 105, "name": "Bass" },
+    { "control": 54,   "channel": 15,  "type": "CC", "newval": 105, "name": "Bass", "lcd_index": 81 },
     { "control": 39,   "channel": 15,  "type": "FOOTSWITCH", "name": "Chords Mute", "color": 82 },
-    { "control": 55,   "channel": 15,  "type": "CC", "newval": 106, "name": "Chord" },
+    { "control": 55,   "channel": 15,  "type": "CC", "newval": 106, "name": "Chord", "lcd_index": 82 },
     { "control": 40,   "channel": 15,  "type": "FOOTSWITCH", "name": "Real Chords Mute", "color": 82 },
-    { "control": 56,   "channel": 15,  "type": "CC", "newval": 107, "name": "Real" },
+    { "control": 56,   "channel": 15,  "type": "CC", "newval": 107, "name": "Real", "lcd_index": 83 },
     { "control": 41,   "channel": 15,  "type": "TABS", "name": "VOICE1", "color": 40, "color": 56 },
-    { "control": 57,   "channel": 15,  "type": "CC", "newval": 114, "name": "Voice 1" },
+    { "control": 57,   "channel": 15,  "type": "CC", "newval": 114, "name": "Voice 1", "lcd_index": 84 },
     { "control": 42,   "channel": 15,  "type": "TABS", "name": "VOICE2", "color": 40, "color": 57 },
-    { "control": 58,   "channel": 15,  "type": "CC", "newval": 115, "name": "Voice 2" },
+    { "control": 58,   "channel": 15,  "type": "CC", "newval": 115, "name": "Voice 2", "lcd_index": 85 },
     { "control": 43,   "channel": 15,  "type": "TABS", "name": "DRAWBARS", "color": 40, "color": 58 },
-    { "control": 59,   "channel": 15,  "type": "CC", "newval": 116, "name": "Drawbar" },
-    { "control": 60,   "channel": 15,  "type": "CC", "newval": 108, "name": "Lower" }
+    { "control": 59,   "channel": 15,  "type": "CC", "newval": 116, "name": "Drawbar", "lcd_index": 86 },
+    { "control": 60,   "channel": 15,  "type": "CC", "newval": 108, "name": "Lower", "lcd_index": 87 }
   ]
 }

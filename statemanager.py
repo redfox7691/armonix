@@ -275,24 +275,35 @@ class StateManager(QtCore.QObject):
                         for ch, id_map in ch_map.items():
                             for pid, meta in id_map.items():  # pid = note/control
                                 color = meta.get("color")
-                                if color is None:
-                                    continue
+                                if color:
+                                    raw_mode  = meta.get("colormode", "stationary")
+                                    colormode = mode_alias.get(raw_mode, raw_mode)
 
-                                raw_mode  = meta.get("colormode", "stationary")
-                                colormode = mode_alias.get(raw_mode, raw_mode)
+                                    note = int(pid) & 0x7F                 # 0..127
+                                    vel  = max(0, min(int(color), 127))    # 0..127
+                                    chan = mode_to_channel.get(colormode, 0)  # 0..15 già ok
 
-                                note = int(pid) & 0x7F                 # 0..127
-                                vel  = max(0, min(int(color), 127))    # 0..127
-                                chan = mode_to_channel.get(colormode, 0)  # 0..15 già ok
+                                    if self.verbose:
+                                        print(f"[DAW] Colore {vel} {colormode} su pid {note} -> ch {chan}")
 
-                                if self.verbose:
-                                    print(f"[DAW] Colore {vel} {colormode} su pid {note} -> ch {chan}")
+                                    if section == 'NOTE':
+                                        color_msg = mido.Message("note_on", channel=chan, note=note, velocity=vel)
+                                    else:
+                                        color_msg = mido.Message("control_change", channel=chan, control=note, value=vel)
+                                    outport.send(color_msg)
 
-                                if section == 'NOTE':
-                                    color_msg = mido.Message("note_on", channel=chan, note=note, velocity=vel)
-                                else:
-                                    color_msg = mido.Message("control_change", channel=chan, control=note, value=vel)
-                                outport.send(color_msg)
+                                # --- NEW: popup LCD name (solo se definito in config) ---
+                                lcd_idx = meta.get("lcd_index")
+                                lcd_name = meta.get("name")
+                                if lcd_idx is not None and lcd_name:
+                                # Launchkey MK3 **88**: header 00 20 29 02 12, comando 07 = parameter name (riga alta)
+                                    hdr = [0x00, 0x20, 0x29, 0x02, 0x12]
+                                    txt = str(lcd_name)[:16]  # ~16 caratteri mostrati nel popup
+                                    data = hdr + [0x07, int(lcd_idx) & 0x7F] + [ord(c) & 0x7F for c in txt]
+                                    if self.verbose:
+                                        print(f"[DAW] invio sysex {data}")
+                                    outport.send(mido.Message("sysex", data=data))
+                                # --- END NEW ---
 
                     if self.verbose:
                         print("[DAW] In ascolto sulla porta DAW.")
