@@ -13,6 +13,13 @@ VNC_RETRY=5   # Secondi di attesa tra un tentativo e l'altro
 
 echo "=== $(date) === Script avviato, log in $LOGFILE" >> $LOGFILE
 
+# Impostazioni display/DBus per i comandi grafici
+export DISPLAY=:0
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
+export DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus
+# Disattiva notifiche XFCE (modalità Non disturbare)
+xfconf-query -c xfce4-notifyd -p /do-not-disturb -n -t bool -s true
+
 while true; do
     ssid=$(iwgetid -r)
     if [[ "$ssid" == "$TARGET_SSID" ]]; then

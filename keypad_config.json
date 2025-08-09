@@ -11,10 +11,10 @@
   "KEY_B": { "type": "FOOTSWITCH", "name": "INTRO/END2" },
   "KEY_C": { "type": "FOOTSWITCH", "name": "INTRO/END3" },
   "KEY_D": { "type": "FOOTSWITCH", "name": "TO END" },
-  "KEY_O": { "type": "FOOTSWITCH", "name": "TEMPO DOWN" },
-  "KEY_P": { "type": "FOOTSWITCH", "name": "START/STOP" },
-  "KEY_Q": { "type": "FOOTSWITCH", "name": "TEMPO UP" },
-  "KEY_R": { "type": "FOOTSWITCH", "name": "DIAL_DOWN" },
-  "KEY_S": { "type": "FOOTSWITCH", "name": "ENTER" },
-  "KEY_T": { "type": "FOOTSWITCH", "name": "DIAL_UP" }
+  "KEY_R": { "type": "FOOTSWITCH", "name": "TEMPO DOWN" },
+  "KEY_S": { "type": "FOOTSWITCH", "name": "START/STOP" },
+  "KEY_T": { "type": "FOOTSWITCH", "name": "TEMPO UP" },
+  "KEY_O": { "type": "FOOTSWITCH", "name": "DIAL_DOWN" },
+  "KEY_P": { "type": "FOOTSWITCH", "name": "ENTER" },
+  "KEY_Q": { "type": "FOOTSWITCH", "name": "DIAL_UP" }
 }

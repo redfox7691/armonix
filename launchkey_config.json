@@ -13,6 +13,8 @@
     { "note": 119,  "channel": 0,  "type": "FOOTSWITCH", "name": "VOICETR.ON/OFF", "color": 5 }
   ],
   "CC": [
+    { "control": 102,  "channel": 15,  "type": "FOOTSWITCH", "name": "ROTOR FAST" },
+    { "control": 103,  "channel": 15,  "type": "FOOTSWITCH", "name": "ROTOR SLOW" },
     { "control": 106,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE UP", "color": 56 },
     { "control": 107,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE DOWN", "color": 56 },
     { "control": 37,   "channel": 15,  "type": "FOOTSWITCH", "name": "Drum Mute", "color": 72 },
@@ -29,6 +31,10 @@
     { "control": 58,   "channel": 15,  "type": "CC", "newval": 115, "name": "Voice 2", "lcd_index": 85 },
     { "control": 43,   "channel": 15,  "type": "TABS", "name": "DRAWBARS", "color": 40, "color": 58 },
     { "control": 59,   "channel": 15,  "type": "CC", "newval": 116, "name": "Drawbar", "lcd_index": 86 },
-    { "control": 60,   "channel": 15,  "type": "CC", "newval": 108, "name": "Lower", "lcd_index": 87 }
+    { "control": 60,   "channel": 15,  "type": "CC", "newval": 108, "name": "Lower", "lcd_index": 87 },
+    { "control": 21,   "channel": 15,  "type": "CC", "newval": 102, "name": "Player 1", "lcd_index": 56 },
+    { "control": 22,   "channel": 15,  "type": "CC", "newval": 103, "name": "Player 2/Style", "lcd_index": 57 },
+    { "control": 23,   "channel": 15,  "type": "CC", "newval": 117, "name": "Micro", "lcd_index": 58 },
+    { "control": 24,   "channel": 15,  "type": "CC", "newval": 118, "name": "Voicetron", "lcd_index": 59 }
   ]
 }
