@@ -5,8 +5,8 @@
 // i CC sono sia pulsanti che potenziometri e slider
 {
   "NOTE": [
-    { "note": 112,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 1" },
-    { "note": 113,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 2" },
+    { "note": 112,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 1","color": 67, "colormode": "static" },
+    { "note": 113,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 2","color": 68, "colormode": "static" },
     { "note": 114,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 3" },
     { "note": 115,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 4" }
   ],

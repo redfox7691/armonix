@@ -3,6 +3,7 @@ import os
 import threading
 from fantom_midi_filter import filter_and_translate_fantom_msg
 from launchkey_midi_filter import (
+    LAUNCHKEY_FILTERS,
     filter_and_translate_launchkey_msg,
     filter_and_translate_launchkey_daw_msg,
 )
@@ -262,6 +263,34 @@ class StateManager(QtCore.QObject):
                         outport.send(init_msg)
                         if self.verbose:
                             print(f"[DAW] Inviato init: {init_msg}")
+
+                    # coloro i pulsanti che hanno la configurazione
+                    mode_to_channel = { "stationary": 0, "flashing": 1, "pulsing": 2 }
+                    mode_alias = { "static": "stationary" }
+
+                    if self.verbose:
+                        print("[DAW] Invio i colori dei pulsanti se sono definiti")
+
+                    for section, ch_map in LAUNCHKEY_FILTERS.items():
+                        for ch, id_map in ch_map.items():
+                            for pid, meta in id_map.items():  # pid = note/control
+                                color = meta.get("color")
+                                if color is None:
+                                    continue
+
+                                raw_mode  = meta.get("colormode", "stationary")
+                                colormode = mode_alias.get(raw_mode, raw_mode)
+
+                                note = int(pid) & 0x7F                 # 0..127
+                                vel  = max(0, min(int(color), 127))    # 0..127
+                                chan = mode_to_channel.get(colormode, 0)  # 0..15 già ok
+
+                                if self.verbose:
+                                    print(f"[DAW] Colore {vel} {colormode} su pid {note} -> ch {chan}")
+
+                                color_msg = mido.Message("note_on", channel=chan, note=note, velocity=vel)
+                                outport.send(color_msg)
+
                     if self.verbose:
                         print("[DAW] In ascolto sulla porta DAW.")
                     for msg in inport:
@@ -271,6 +300,7 @@ class StateManager(QtCore.QObject):
             except Exception as e:
                 if self.verbose:
                     print(f"[DAW] Errore: {e}")
+
 
         self.daw_listener_thread = threading.Thread(target=daw_listener, daemon=True)
         self.daw_listener_thread.start()
