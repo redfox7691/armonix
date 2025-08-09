@@ -5,20 +5,30 @@
 // i CC sono sia pulsanti che potenziometri e slider
 {
   "NOTE": [
-    { "note": 112,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 1","color": 67, "colormode": "static" },
-    { "note": 113,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 2","color": 68, "colormode": "static" },
-    { "note": 114,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 3" },
-    { "note": 115,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 4" }
+    { "note": 112,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 1", "color": 56, "colormode": "static" },
+    { "note": 113,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 2", "color": 56, "colormode": "static" },
+    { "note": 114,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 3", "color": 56, "colormode": "static" },
+    { "note": 115,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 4", "color": 56, "colormode": "static" },
+    { "note": 116,  "channel": 0,  "type": "TABS", "name": "PIANIST", "color": 67, "colormode": "static" },
+    { "note": 119,  "channel": 0,  "type": "FOOTSWITCH", "name": "VOICETR.ON/OFF", "color": 5 }
   ],
   "CC": [
-    { "control": 37,  "channel": 15,  "type": "FOOTSWITCH", "name": "ARR.A" },
-    { "control": 38,  "channel": 15,  "type": "FOOTSWITCH", "name": "ARR.B" },
-    { "control": 39,  "channel": 15,  "type": "FOOTSWITCH", "name": "ARR.C" },
-    { "control": 40,  "channel": 15,  "type": "FOOTSWITCH", "name": "ARR.D" },
-    { "control": 53,  "channel": 15,  "type": "CC", "newval": 104, "name": "Drum"},
-    { "control": 54,  "channel": 15,  "type": "CC", "newval": 105, "name": "Bass"},
-    { "control": 55,  "channel": 15,  "type": "CC", "newval": 106, "name": "Chord"},
-    { "control": 56,  "channel": 15,  "type": "CC", "newval": 107, "name": "Real"},
-    { "control": 57,  "channel": 15,  "type": "CC", "newval": 108, "name": "Lower"}
+    { "control": 106,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE UP", "color": 56 },
+    { "control": 107,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE DOWN", "color": 56 },
+    { "control": 37,   "channel": 15,  "type": "FOOTSWITCH", "name": "Drum Mute", "color": 72 },
+    { "control": 53,   "channel": 15,  "type": "CC", "newval": 104, "name": "Drum" },
+    { "control": 38,   "channel": 15,  "type": "FOOTSWITCH", "name": "Bass Mute", "color": 81 },
+    { "control": 54,   "channel": 15,  "type": "CC", "newval": 105, "name": "Bass" },
+    { "control": 39,   "channel": 15,  "type": "FOOTSWITCH", "name": "Chords Mute", "color": 82 },
+    { "control": 55,   "channel": 15,  "type": "CC", "newval": 106, "name": "Chord" },
+    { "control": 40,   "channel": 15,  "type": "FOOTSWITCH", "name": "Real Chords Mute", "color": 82 },
+    { "control": 56,   "channel": 15,  "type": "CC", "newval": 107, "name": "Real" },
+    { "control": 41,   "channel": 15,  "type": "TABS", "name": "VOICE1", "color": 40, "color": 56 },
+    { "control": 57,   "channel": 15,  "type": "CC", "newval": 114, "name": "Voice 1" },
+    { "control": 42,   "channel": 15,  "type": "TABS", "name": "VOICE2", "color": 40, "color": 57 },
+    { "control": 58,   "channel": 15,  "type": "CC", "newval": 115, "name": "Voice 2" },
+    { "control": 43,   "channel": 15,  "type": "TABS", "name": "DRAWBARS", "color": 40, "color": 58 },
+    { "control": 59,   "channel": 15,  "type": "CC", "newval": 116, "name": "Drawbar" },
+    { "control": 60,   "channel": 15,  "type": "CC", "newval": 108, "name": "Lower" }
   ]
 }

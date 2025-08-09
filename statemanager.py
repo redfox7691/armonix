@@ -288,7 +288,10 @@ class StateManager(QtCore.QObject):
                                 if self.verbose:
                                     print(f"[DAW] Colore {vel} {colormode} su pid {note} -> ch {chan}")
 
-                                color_msg = mido.Message("note_on", channel=chan, note=note, velocity=vel)
+                                if section == 'NOTE':
+                                    color_msg = mido.Message("note_on", channel=chan, note=note, velocity=vel)
+                                else:
+                                    color_msg = mido.Message("control_change", channel=chan, control=note, value=vel)
                                 outport.send(color_msg)
 
                     if self.verbose:
