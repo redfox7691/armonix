@@ -2,6 +2,7 @@ import mido
 import os
 import threading
 from fantom_midi_filter import filter_and_translate_fantom_msg
+import launchkey_midi_filter
 from launchkey_midi_filter import (
     LAUNCHKEY_FILTERS,
     filter_and_translate_launchkey_msg,
@@ -92,14 +93,21 @@ class StateManager(QtCore.QObject):
             self.stop_ble_listener()
 
         # Launchkey DAW port detection + listener
-        if daw_in_port and daw_out_port and not self.daw_connected:
+        if (
+            self.ketron_port
+            and daw_in_port
+            and daw_out_port
+            and not self.daw_connected
+        ):
             self.daw_in_port = daw_in_port
             self.daw_out_port = daw_out_port
             self.daw_connected = True
             if self.verbose:
                 print(f"Porta DAW collegata: in={daw_in_port}, out={daw_out_port}")
             self.start_daw_listener()
-        elif self.daw_connected and (not daw_in_port or not daw_out_port):
+        elif self.daw_connected and (
+            not self.ketron_port or not daw_in_port or not daw_out_port
+        ):
             if self.verbose:
                 print("Porta DAW scollegata")
             self.daw_connected = False
@@ -323,6 +331,8 @@ class StateManager(QtCore.QObject):
         if self.daw_listener_stop:
             self.daw_listener_stop.set()
         self.daw_listener_thread = None
+        # Reset Launchkey DAW filter's Ketron outport
+        launchkey_midi_filter._ketron_outport
 
     # -------- Master MIDI methods --------
     def start_master_listener(self):

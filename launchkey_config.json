@@ -3,20 +3,34 @@
 // Ogni voce descrive come trasformare NOTE o CC in azioni Ketron.
 // Le note sono i PAD
 // i CC sono sia pulsanti che potenziometri e slider
+//
+//                21 ..    28   51
+//                              52
+//108 ---  106  n096 ... n103  104   c53 ... c61   74 ...  77
+//102 103  107  n112 ... n119  105    37 ...  45  115 ... 118
 {
   "NOTE": [
-    { "note": 112,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 1", "color": 56, "colormode": "static" },
-    { "note": 113,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 2", "color": 56, "colormode": "static" },
-    { "note": 114,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 3", "color": 56, "colormode": "static" },
-    { "note": 115,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 4", "color": 56, "colormode": "static" },
-    { "note": 116,  "channel": 0,  "type": "TABS", "name": "PIANIST", "color": 67, "colormode": "static" },
-    { "note": 119,  "channel": 0,  "type": "FOOTSWITCH", "name": "VOICETR.ON/OFF", "color": 5 }
+    { "note":  96,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 1", "color": 56, "colormode": "static" },
+    { "note":  97,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 2", "color": 56, "colormode": "static" },
+    { "note":  98,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 3", "color": 56, "colormode": "static" },
+    { "note":  99,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 4", "color": 56, "colormode": "static" },
+    { "note": 100,  "channel": 0,  "type": "TABS", "name": "PIANIST", "color": 67, "colormode": "static" },
+    { "note": 112,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.A", "color": 21, "colormode": "static" },
+    { "note": 113,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.B", "color": 21, "colormode": "static" },
+    { "note": 114,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.C", "color": 21, "colormode": "static" },
+    { "note": 115,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.D", "color": 21, "colormode": "static" },
+    { "note": 116,  "channel": 0,  "type": "FOOTSWITCH", "name": "BREAK", "color": 13, "colormode": "static" },
+    { "note": 117,  "channel": 0,  "type": "FOOTSWITCH", "name": "FILL", "color": 15, "colormode": "static" },
+    { "note": 118,  "channel": 0,  "type": "FOOTSWITCH", "name": "VARI", "color": 12, "colormode": "static" },
+    { "note": 119,  "channel": 0,  "type": "FOOTSWITCH", "name": "HALF BAR", "color": 6, "colormode": "static" }
   ],
   "CC": [
     { "control": 102,  "channel": 15,  "type": "FOOTSWITCH", "name": "ROTOR FAST" },
     { "control": 103,  "channel": 15,  "type": "FOOTSWITCH", "name": "ROTOR SLOW" },
+    { "control": 104,  "channel": 0,  "type": "FOOTSWITCH", "name": "ROTOR SLOW" , "color": 98},
     { "control": 106,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE UP", "color": 56 },
     { "control": 107,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE DOWN", "color": 56 },
+    { "control": 108,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICETR.ON/OFF" },
     { "control": 37,   "channel": 15,  "type": "FOOTSWITCH", "name": "Drum Mute", "color": 72 },
     { "control": 53,   "channel": 15,  "type": "CC", "newval": 104, "name": "Drum", "lcd_index": 80 },
     { "control": 38,   "channel": 15,  "type": "FOOTSWITCH", "name": "Bass Mute", "color": 81 },
