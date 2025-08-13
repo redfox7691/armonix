@@ -8,47 +8,60 @@
 //                              52
 //108 ---  106  n096 ... n103  104   c53 ... c61   74 ...  77
 //102 103  107  n112 ... n119  105    37 ...  45  115 ... 118
+// 
+// voci e suoni: azzurro
+// ritmi: verde (giallo se pericoloso)
+// mic: rosso
 {
   "NOTE": [
-    { "note":  96,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 1", "color": 56, "colormode": "static" },
-    { "note":  97,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 2", "color": 56, "colormode": "static" },
-    { "note":  98,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 3", "color": 56, "colormode": "static" },
-    { "note":  99,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 4", "color": 56, "colormode": "static" },
-    { "note": 100,  "channel": 0,  "type": "TABS", "name": "PIANIST", "color": 67, "colormode": "static" },
-    { "note": 112,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.A", "color": 21, "colormode": "static" },
-    { "note": 113,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.B", "color": 21, "colormode": "static" },
-    { "note": 114,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.C", "color": 21, "colormode": "static" },
-    { "note": 115,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.D", "color": 21, "colormode": "static" },
-    { "note": 116,  "channel": 0,  "type": "FOOTSWITCH", "name": "BREAK", "color": 13, "colormode": "static" },
-    { "note": 117,  "channel": 0,  "type": "FOOTSWITCH", "name": "FILL", "color": 15, "colormode": "static" },
-    { "note": 118,  "channel": 0,  "type": "FOOTSWITCH", "name": "VARI", "color": 12, "colormode": "static" },
-    { "note": 119,  "channel": 0,  "type": "FOOTSWITCH", "name": "HALF BAR", "color": 6, "colormode": "static" }
+    { "note":  96,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 1", "color": 40, "colormode": "static" },
+    { "note":  97,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 2", "color": 41, "colormode": "static" },
+    { "note":  98,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 3", "color": 42, "colormode": "static" },
+    { "note":  99,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 4", "color": 43, "colormode": "static" },
+    { "note": 100,  "channel": 0,  "type": "TABS", "name": "PIANIST", "color": 46, "colormode": "static" },
+    { "note": 102,  "channel": 0,  "type": "FOOTSWITCH", "name": "MICRO1 ON/OFF", "color": 5, "colormode": "static" },
+    { "note": 103,  "channel": 0,  "type": "FOOTSWITCH", "name": "VOICETR.ON/OFF", "color": 69, "colormode": "static" },
+    { "note": 112,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.A", "color": 20, "colormode": "static" },
+    { "note": 113,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.B", "color": 20, "colormode": "static" },
+    { "note": 114,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.C", "color": 20, "colormode": "static" },
+    { "note": 115,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.D", "color": 20, "colormode": "static" },
+    { "note": 116,  "channel": 0,  "type": "FOOTSWITCH", "name": "BREAK", "color": 65, "colormode": "static" },
+    { "note": 117,  "channel": 0,  "type": "FOOTSWITCH", "name": "FILL", "color": 75, "colormode": "static" },
+    { "note": 118,  "channel": 0,  "type": "FOOTSWITCH", "name": "VARI", "color": 100, "colormode": "static" },
+    { "note": 119,  "channel": 0,  "type": "FOOTSWITCH", "name": "HALF BAR", "color": 13, "colormode": "static" }
   ],
   "CC": [
     { "control": 102,  "channel": 15,  "type": "FOOTSWITCH", "name": "ROTOR FAST" },
     { "control": 103,  "channel": 15,  "type": "FOOTSWITCH", "name": "ROTOR SLOW" },
-    { "control": 104,  "channel": 0,  "type": "FOOTSWITCH", "name": "ROTOR SLOW" , "color": 98},
-    { "control": 106,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE UP", "color": 56 },
-    { "control": 107,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE DOWN", "color": 56 },
-    { "control": 108,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICETR.ON/OFF" },
-    { "control": 37,   "channel": 15,  "type": "FOOTSWITCH", "name": "Drum Mute", "color": 72 },
+    { "control": 104,  "channel":  0,  "type": "FOOTSWITCH", "name": "Micro Edit" , "color": 53},
+    { "control": 105,  "channel":  0,  "type": "FOOTSWITCH", "name": "TALK ON/OFF" , "color": 1},
+    { "control": 106,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE UP", "color": 47},
+    { "control": 107,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE DOWN", "color": 47},
+    { "control": 108,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICETR.ON/OFF", "color": 3 },
+    { "control": 37,   "channel": 15,  "type": "FOOTSWITCH", "name": "Drum Mute", "color": 15 },
     { "control": 53,   "channel": 15,  "type": "CC", "newval": 104, "name": "Drum", "lcd_index": 80 },
-    { "control": 38,   "channel": 15,  "type": "FOOTSWITCH", "name": "Bass Mute", "color": 81 },
+    { "control": 38,   "channel": 15,  "type": "FOOTSWITCH", "name": "Bass Mute", "color": 7 },
     { "control": 54,   "channel": 15,  "type": "CC", "newval": 105, "name": "Bass", "lcd_index": 81 },
-    { "control": 39,   "channel": 15,  "type": "FOOTSWITCH", "name": "Chords Mute", "color": 82 },
+    { "control": 39,   "channel": 15,  "type": "FOOTSWITCH", "name": "Chords Mute", "color": 23 },
     { "control": 55,   "channel": 15,  "type": "CC", "newval": 106, "name": "Chord", "lcd_index": 82 },
-    { "control": 40,   "channel": 15,  "type": "FOOTSWITCH", "name": "Real Chords Mute", "color": 82 },
+    { "control": 40,   "channel": 15,  "type": "FOOTSWITCH", "name": "Real Chords Mute", "color": 31 },
     { "control": 56,   "channel": 15,  "type": "CC", "newval": 107, "name": "Real", "lcd_index": 83 },
-    { "control": 41,   "channel": 15,  "type": "TABS", "name": "VOICE1", "color": 40, "color": 56 },
+    { "control": 41,   "channel": 15,  "type": "TABS", "name": "VOICE1", "color": 45 },
     { "control": 57,   "channel": 15,  "type": "CC", "newval": 114, "name": "Voice 1", "lcd_index": 84 },
-    { "control": 42,   "channel": 15,  "type": "TABS", "name": "VOICE2", "color": 40, "color": 57 },
+    { "control": 42,   "channel": 15,  "type": "TABS", "name": "VOICE2", "color": 45 },
     { "control": 58,   "channel": 15,  "type": "CC", "newval": 115, "name": "Voice 2", "lcd_index": 85 },
-    { "control": 43,   "channel": 15,  "type": "TABS", "name": "DRAWBARS", "color": 40, "color": 58 },
+    { "control": 43,   "channel": 15,  "type": "TABS", "name": "DRAWBARS", "color": 55 },
     { "control": 59,   "channel": 15,  "type": "CC", "newval": 116, "name": "Drawbar", "lcd_index": 86 },
+    { "control": 44,   "channel": 15,  "type": "FOOTSWITCH", "name": "LOW. MUTE", "color": 63 },
     { "control": 60,   "channel": 15,  "type": "CC", "newval": 108, "name": "Lower", "lcd_index": 87 },
     { "control": 21,   "channel": 15,  "type": "CC", "newval": 102, "name": "Player 1", "lcd_index": 56 },
     { "control": 22,   "channel": 15,  "type": "CC", "newval": 103, "name": "Player 2/Style", "lcd_index": 57 },
-    { "control": 23,   "channel": 15,  "type": "CC", "newval": 117, "name": "Micro", "lcd_index": 58 },
-    { "control": 24,   "channel": 15,  "type": "CC", "newval": 118, "name": "Voicetron", "lcd_index": 59 }
+    { "control": 27,   "channel": 15,  "type": "CC", "newval": 117, "name": "Micro", "lcd_index": 62 },
+    { "control": 28,   "channel": 15,  "type": "CC", "newval": 118, "name": "Voicetron", "lcd_index": 63 },
+    { "control":  76,  "channel": 15,  "type": "FOOTSWITCH", "name": "TAP" },
+    { "control": 115,  "channel": 15,  "type": "FOOTSWITCH", "name": "INTRO/END1" },
+    { "control": 116,  "channel": 15,  "type": "FOOTSWITCH", "name": "INTRO/END2" },
+    { "control": 117,  "channel": 15,  "type": "FOOTSWITCH", "name": "INTRO/END3" },
+    { "control": 118,  "channel": 15,  "type": "FOOTSWITCH", "name": "TO END" }
   ]
 }

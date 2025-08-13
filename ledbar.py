@@ -6,7 +6,7 @@ class LedBar(QtWidgets.QWidget):
         self.setWindowFlags(QtCore.Qt.FramelessWindowHint | QtCore.Qt.WindowStaysOnTopHint)
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self.setGeometry(900, 38, 120, 38)
-        self.led_letters = ['F', 'E', 'K', 'B', 'X']
+        self.led_letters = ['M', 'E', 'K', 'B', 'X']
         self.states_getter = states_getter
         self.state_manager = None  # Da settare se vuoi il click abilitato
         self.show()

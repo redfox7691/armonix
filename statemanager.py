@@ -266,11 +266,23 @@ class StateManager(QtCore.QObject):
                 print(f"[DAW-THREAD] Avvio thread: porta DAW in={self.daw_in_port}, out={self.daw_out_port}")
             try:
                 with mido.open_input(self.daw_in_port) as inport, mido.open_output(self.daw_out_port, exclusive=False) as outport:
-                    for note in (0x0C, 0x0B, 0x0A):
-                        init_msg = mido.Message('note_on', channel=15, note=note, velocity=0x7F)
-                        outport.send(init_msg)
-                        if self.verbose:
-                            print(f"[DAW] Inviato init: {init_msg}")
+                    init_msg = mido.Message('note_on', channel=15, note=0x0C, velocity=0x7F)
+                    outport.send(init_msg)
+                    if self.verbose:
+                        print(f"[DAW] Inviato init: {init_msg}")
+                    init_msg = mido.Message('note_off', channel=15, note=0x0D, velocity=0x7F)
+                    outport.send(init_msg)
+                    if self.verbose:
+                        print(f"[DAW] Inviato init: {init_msg}")
+                    init_msg = mido.Message('note_off', channel=15, note=0x0A, velocity=0x7F)
+                    outport.send(init_msg)
+                    if self.verbose:
+                        print(f"[DAW] Inviato init: {init_msg}")
+
+                    init_msg = mido.Message('note_on', channel=15, note=0x0C, velocity=0x7F)
+                    outport.send(init_msg)
+                    if self.verbose:
+                        print(f"[DAW] Inviato init: {init_msg}")
 
                     # coloro i pulsanti che hanno la configurazione
                     mode_to_channel = { "stationary": 0, "flashing": 1, "pulsing": 2 }
