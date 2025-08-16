@@ -53,6 +53,18 @@ vengono inoltrati al Ketron, mentre gli altri vengono scartati.
 
 Il file `keypad_config.json` definisce la mappatura tra i tasti del tastierino e i messaggi Sysex o Footswitch da inviare al Ketron. È possibile modificare questo file per adattare i comandi alle proprie esigenze.
 
+## Configurazione della Launchkey
+
+Il file `launchkey_config.json` controlla pad, pulsanti e potenziometri della Launchkey. È un oggetto JSON con tre sezioni principali:
+
+- `SELECTOR_GROUPS`: definisce gruppi di selezione esclusiva con gli ID di gruppo e i colori da applicare quando un membro è attivo (`on_color`) o inattivo (`off_color`).
+- `NOTE`: elenco di regole per i pad. Ogni voce specifica la nota, il canale e l'azione da inviare al Ketron.
+- `CC`: elenco di regole per pulsanti e controlli che inviano Control Change.
+
+Le regole nelle sezioni `NOTE` e `CC` possono includere il campo opzionale `group` per indicare l'appartenenza a uno dei gruppi definiti in `SELECTOR_GROUPS`. Quando un elemento di un gruppo viene attivato, il suo LED assume il colore `on_color` mentre gli altri membri vengono aggiornati con `off_color`.
+
+Il campo `tabs_led` collega il LED di un controllo allo stato di un TAB del Ketron e accetta uno dei nomi presenti in `tabs_lookup.py` (ad esempio `MICRO` o `VOICE1`). Quando il TAB è disattivato viene usato `tabs_led_off_color`. L'opzione `colormode` determina l'animazione del LED e può essere `static`, `flashing` o `pulsing`.
+
 ## Adattamenti ad altri setup
 
 La logica è suddivisa in moduli (gestione dello stato, filtro MIDI, listener per il tastierino), rendendo relativamente semplice l'estensione a strumenti o controller diversi. Basterà modificare le mappature e, se necessario, aggiungere nuovi filtri MIDI.
