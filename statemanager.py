@@ -7,14 +7,16 @@ from launchkey_midi_filter import (
     LAUNCHKEY_FILTERS,
     filter_and_translate_launchkey_msg,
     filter_and_translate_launchkey_daw_msg,
+    handle_tabs_led,
 )
 from PyQt5 import QtCore
 
 class StateManager(QtCore.QObject):
-    def __init__(self, verbose=False, master="fantom"):
+    def __init__(self, verbose=False, master="fantom", tabs=False):
         super().__init__()
         self.verbose = verbose
         self.master = master
+        self.tabs_enabled = tabs
         self.ledbar = None
         self.master_port = None
         self.ketron_port = None
@@ -43,6 +45,10 @@ class StateManager(QtCore.QObject):
         self.daw_out_port = None
         self.daw_listener_thread = None
         self.daw_listener_stop = None
+
+        # Tabs listener
+        self.tabs_listener_thread = None
+        self.tabs_listener_stop = None
 
     def set_ledbar(self, ledbar):
         self.ledbar = ledbar
@@ -114,6 +120,12 @@ class StateManager(QtCore.QObject):
             self.daw_in_port = None
             self.daw_out_port = None
             self.stop_daw_listener()
+
+        # Ketron TAB events listener
+        if self.tabs_enabled and self.ketron_port and self.daw_out_port:
+            self.start_tabs_listener()
+        else:
+            self.stop_tabs_listener()
 
         # Aggiorna stato dei LED
         if self.master_port and self.ketron_port:
@@ -295,6 +307,8 @@ class StateManager(QtCore.QObject):
                         for ch, id_map in ch_map.items():
                             for pid, meta in id_map.items():  # pid = note/control
                                 color = meta.get("color")
+                                if meta.get("tabs_led"):
+                                    color = meta.get("tabs_led_off_color", meta.get("tabsled_off_color", 0))
                                 if color:
                                     raw_mode  = meta.get("colormode", "stationary")
                                     colormode = mode_alias.get(raw_mode, raw_mode)
@@ -345,6 +359,38 @@ class StateManager(QtCore.QObject):
         self.daw_listener_thread = None
         # Reset Launchkey DAW filter's Ketron outport
         launchkey_midi_filter._ketron_outport
+
+    # -------- Tabs LED methods --------
+    def start_tabs_listener(self):
+        if self.tabs_listener_thread and self.tabs_listener_thread.is_alive():
+            return
+        self.tabs_listener_stop = threading.Event()
+
+        def tabs_listener():
+            if self.verbose:
+                print(f"[TABS] In ascolto sulla porta Ketron per eventi TAB")
+            try:
+                with mido.open_input(self.ketron_port) as inport:
+                    for msg in inport:
+                        if self.tabs_listener_stop.is_set():
+                            break
+                        if msg.type == "sysex":
+                            data = list(msg.data)
+                            if len(data) >= 4 and data[0] == 0x26 and data[1] == 0x7C:
+                                tab_val = data[2]
+                                status = data[3]
+                                handle_tabs_led(tab_val, status, self.daw_out_port, verbose=self.verbose)
+            except Exception as e:
+                if self.verbose:
+                    print(f"[TABS] Errore: {e}")
+
+        self.tabs_listener_thread = threading.Thread(target=tabs_listener, daemon=True)
+        self.tabs_listener_thread.start()
+
+    def stop_tabs_listener(self):
+        if self.tabs_listener_stop:
+            self.tabs_listener_stop.set()
+        self.tabs_listener_thread = None
 
     # -------- Master MIDI methods --------
     def start_master_listener(self):
