@@ -31,6 +31,7 @@ def _load_launchkey_filters(path):
 
     filters = {"NOTE": {}, "CC": {}}
     groups = {}
+    tabs_led_map = {}
     try:
         with open(path, "r") as f:
             lines = f.readlines()
@@ -64,6 +65,15 @@ def _load_launchkey_filters(path):
             groups.setdefault(int(gid), {"on_color": None, "off_color": None, "members": []})[
                 "members"
             ].append(("NOTE", int(note)))
+        tabs_name = entry.get("tabs_led")
+        if tabs_name:
+            tabs_led_map[tabs_name] = {
+                "section": "NOTE",
+                "pid": int(note),
+                "on_color": entry.get("color"),
+                "off_color": entry.get("tabs_led_off_color", entry.get("tabsled_off_color", 0)),
+                "colormode": entry.get("colormode", "static"),
+            }
 
     for entry in data.get("CC", []):
         chan = entry.get("channel")
@@ -76,14 +86,25 @@ def _load_launchkey_filters(path):
             groups.setdefault(int(gid), {"on_color": None, "off_color": None, "members": []})[
                 "members"
             ].append(("CC", int(cc)))
+        tabs_name = entry.get("tabs_led")
+        if tabs_name:
+            tabs_led_map[tabs_name] = {
+                "section": "CC",
+                "pid": int(cc),
+                "on_color": entry.get("color"),
+                "off_color": entry.get("tabs_led_off_color", entry.get("tabsled_off_color", 0)),
+                "colormode": entry.get("colormode", "static"),
+            }
 
-    global LAUNCHKEY_GROUPS
+    global LAUNCHKEY_GROUPS, TABS_LED_MAP
     LAUNCHKEY_GROUPS = groups
+    TABS_LED_MAP = tabs_led_map
 
     return filters
 
 
 LAUNCHKEY_GROUPS = {}
+TABS_LED_MAP = {}
 LAUNCHKEY_FILTERS = _load_launchkey_filters(_config_path)
 
 
@@ -123,6 +144,34 @@ def _apply_group_colors(outport, section, pid, group_id, mode="static"):
         if sec == section and member_pid == pid:
             continue
         _send_color(outport, sec, member_pid, off_color, mode)
+
+
+def handle_tabs_led(tab_value, status, daw_outport, verbose=False):
+    """Update Launchkey LED colors based on Ketron TAB events."""
+    if daw_outport is None:
+        return
+    # reverse lookup tab name
+    tab_name = next((name for name, val in TABS_LOOKUP.items() if val == tab_value), None)
+    if tab_name is None:
+        if verbose:
+            print(f"[TABS-LED] Tab sconosciuto: {tab_value}")
+        return
+    meta = TABS_LED_MAP.get(tab_name)
+    if not meta:
+        if verbose:
+            print(f"[TABS-LED] Nessun LED configurato per {tab_name}")
+        return
+    color = meta["on_color"] if status >= 0x40 else meta["off_color"]
+    _send_color(
+        daw_outport,
+        meta["section"],
+        meta["pid"],
+        color,
+        meta.get("colormode", "static"),
+    )
+    if verbose:
+        state = "ON" if status >= 0x40 else "OFF"
+        print(f"[TABS-LED] {tab_name} {state} -> colore {color}")
 
 
 # --- Master port filter ---------------------------------------------------
