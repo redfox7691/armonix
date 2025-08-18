@@ -279,11 +279,23 @@ class StateManager(QtCore.QObject):
                     outport.send(init_msg)
                     if self.verbose:
                         print(f"[DAW] Inviato init: {init_msg}")
-
                     init_msg = mido.Message('note_on', channel=15, note=0x0C, velocity=0x7F)
                     outport.send(init_msg)
                     if self.verbose:
                         print(f"[DAW] Inviato init: {init_msg}")
+
+                    # Display DEFAULT
+                    hdr = [0x00, 0x20, 0x29, 0x02, 0x12, 0x04]
+                    txt_1 = "   Ketron EVM   "
+                    txt_2 = " Armonix v. 1.0 "
+                    data = hdr + [0x00] + [ord(c) & 0x7F for c in txt_1]
+                    if self.verbose:
+                        print(f"[DAW] set default display sysex {data}")
+                    outport.send(mido.Message("sysex", data=data))
+                    data = hdr + [0x01] + [ord(c) & 0x7F for c in txt_2]
+                    if self.verbose:
+                        print(f"[DAW] set default display sysex {data}")
+                    outport.send(mido.Message("sysex", data=data))
 
                     # coloro i pulsanti che hanno la configurazione
                     mode_to_channel = { "stationary": 0, "flashing": 1, "pulsing": 2 }
