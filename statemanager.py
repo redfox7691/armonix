@@ -343,8 +343,14 @@ class StateManager(QtCore.QObject):
         if self.daw_listener_stop:
             self.daw_listener_stop.set()
         self.daw_listener_thread = None
-        # Reset Launchkey DAW filter's Ketron outport
-        launchkey_midi_filter._ketron_outport
+        # Reset Launchkey DAW filter's Ketron outport so a new connection
+        # can be established after disconnections or device restarts.
+        try:
+            if launchkey_midi_filter._ketron_outport:
+                launchkey_midi_filter._ketron_outport.close()
+        except Exception:
+            pass
+        launchkey_midi_filter._ketron_outport = None
 
     # -------- Master MIDI methods --------
     def start_master_listener(self):
