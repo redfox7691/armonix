@@ -342,6 +342,9 @@ class StateManager(QtCore.QObject):
     def stop_daw_listener(self):
         if self.daw_listener_stop:
             self.daw_listener_stop.set()
+        thread = self.daw_listener_thread
+        if thread:
+            thread.join(timeout=1)
         self.daw_listener_thread = None
         # Reset Launchkey DAW filter's Ketron outport so a new connection
         # can be established after disconnections or device restarts.
@@ -396,4 +399,7 @@ class StateManager(QtCore.QObject):
     def stop_master_listener(self):
         if hasattr(self, "master_listener_stop") and self.master_listener_stop:
             self.master_listener_stop.set()
+        thread = getattr(self, "master_listener_thread", None)
+        if thread:
+            thread.join(timeout=1)
         self.master_listener_thread = None
