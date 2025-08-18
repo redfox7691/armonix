@@ -1,6 +1,7 @@
 import mido
 import os
 import threading
+import time
 from fantom_midi_filter import filter_and_translate_fantom_msg
 import launchkey_midi_filter
 from launchkey_midi_filter import (
@@ -373,22 +374,22 @@ class StateManager(QtCore.QObject):
                 with mido.open_input(self.master_port) as inport, mido.open_output(self.ketron_port, exclusive=False) as outport:
                     if self.verbose:
                         print(f"[MASTER] In ascolto su {self.master}.")
-                    for msg in inport:
-                        if self.master_listener_stop.is_set():
-                            break
-                        try:
-                            if self.verbose:
-                                print(f"[MASTER-DEBUG] Ricevuto: {msg}")
-                            filter_func(
-                                msg,
-                                outport,
-                                self,
-                                armonix_enabled=(self.state == "ready"),
-                                state=self.state,
-                                verbose=self.verbose
-                            )
-                        except Exception as err:
-                            print(f"[MASTER-FILTER] Errore nel filtro: {err}")
+                    while not self.master_listener_stop.is_set():
+                        for msg in inport.iter_pending():
+                            try:
+                                if self.verbose:
+                                    print(f"[MASTER-DEBUG] Ricevuto: {msg}")
+                                filter_func(
+                                    msg,
+                                    outport,
+                                    self,
+                                    armonix_enabled=(self.state == "ready"),
+                                    state=self.state,
+                                    verbose=self.verbose
+                                )
+                            except Exception as err:
+                                print(f"[MASTER-FILTER] Errore nel filtro: {err}")
+                        time.sleep(0.001)
             except Exception as e:
                 if self.verbose:
                     print(f"[MASTER] Errore: {e}")
