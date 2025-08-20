@@ -292,6 +292,8 @@ class StateManager(QtCore.QObject):
 
                     launchkey_midi_filter.init_default_display(outport, verbose=self.verbose)
 
+                    launchkey_midi_filter.CUSTOM_TOGGLE_STATES.clear()
+
                     # coloro i pulsanti che hanno la configurazione
                     mode_to_channel = { "stationary": 0, "flashing": 1, "pulsing": 2 }
                     mode_alias = { "static": "stationary" }
@@ -303,7 +305,11 @@ class StateManager(QtCore.QObject):
                         for ch, id_map in ch_map.items():
                             for pid, meta in id_map.items():  # pid = note/control
                                 color = meta.get("color")
-                                if color:
+                                if color is None:
+                                    color = meta.get("color_off")
+                                    if color is None:
+                                        color = meta.get("color_on")
+                                if color is not None:
                                     raw_mode  = meta.get("colormode", "stationary")
                                     colormode = mode_alias.get(raw_mode, raw_mode)
 
