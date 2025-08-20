@@ -1,6 +1,9 @@
 import json
 import os
 import re
+import subprocess
+import threading
+from datetime import datetime
 
 import mido
 
@@ -85,6 +88,58 @@ def _load_launchkey_filters(path):
 
 LAUNCHKEY_GROUPS = {}
 LAUNCHKEY_FILTERS = _load_launchkey_filters(_config_path)
+
+_display_timer = None
+_default_lines = ("", "")
+
+
+def _send_display(outport, line1, line2, verbose=False):
+    hdr = [0x00, 0x20, 0x29, 0x02, 0x12, 0x04]
+    line1 = line1.ljust(16)[:16]
+    line2 = line2.ljust(16)[:16]
+    data = hdr + [0x00] + [ord(c) & 0x7F for c in line1]
+    if verbose:
+        print(f"[DAW] set display sysex {data}")
+    outport.send(mido.Message("sysex", data=data))
+    data = hdr + [0x01] + [ord(c) & 0x7F for c in line2]
+    if verbose:
+        print(f"[DAW] set display sysex {data}")
+    outport.send(mido.Message("sysex", data=data))
+
+
+def init_default_display(outport, verbose=False):
+    """Compute default message with git info and show it."""
+    global _default_lines
+    try:
+        version = subprocess.check_output(
+            ["git", "rev-list", "--count", "HEAD"], cwd=base_dir
+        ).decode().strip()
+    except Exception:
+        version = "0"
+    try:
+        date = subprocess.check_output(
+            ["git", "log", "-1", "--format=%cd", "--date=format:%d/%m/%Y"],
+            cwd=base_dir,
+        ).decode().strip()
+    except Exception:
+        date = datetime.now().strftime("%d/%m/%Y")
+    line1 = "Armonix".center(16)
+    line2 = f"{date} v{version}".center(16)
+    _default_lines = (line1[:16], line2[:16])
+    _send_display(outport, *_default_lines, verbose=verbose)
+
+
+def show_default_display(outport, verbose=False):
+    _send_display(outport, *_default_lines, verbose=verbose)
+
+
+def show_temp_display(outport, line1, line2, verbose=False):
+    global _display_timer
+    if _display_timer:
+        _display_timer.cancel()
+    _send_display(outport, line1, line2, verbose=verbose)
+    _display_timer = threading.Timer(3.0, show_default_display, args=(outport, verbose))
+    _display_timer.start()
 
 
 def _send_color(outport, section, pid, color, mode="static"):
@@ -190,12 +245,16 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                 send_sysex_to_ketron(_ketron_outport, data)
                 if verbose:
                     print(f"[LAUNCHKEY-DAW-FILTER] NOTE -> FOOTSWITCH {name} {'ON' if is_on else 'OFF'}")
+                if is_on and not state_manager.disable_realtime_display:
+                    show_temp_display(daw_outport, "FOOTSWITCH", name, verbose)
             elif rtype == "TABS" and name in TABS_LOOKUP:
                 val = TABS_LOOKUP[name]
                 data = sysex_tabs(val, status)
                 send_sysex_to_ketron(_ketron_outport, data)
                 if verbose:
                     print(f"[LAUNCHKEY-DAW-FILTER] NOTE -> TABS {name} {'ON' if is_on else 'OFF'}")
+                if is_on and not state_manager.disable_realtime_display:
+                    show_temp_display(daw_outport, "TABS", name, verbose)
 
             if is_on:
                 group_id = rule.get("group")
@@ -231,6 +290,8 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                         print(
                             f"[LAUNCHKEY-DAW-FILTER] CC {msg.control} -> FOOTSWITCH {name}"
                         )
+                    if msg.value > 0 and not state_manager.disable_realtime_display:
+                        show_temp_display(daw_outport, "FOOTSWITCH", name, verbose)
                 elif rtype == "TABS" and name in TABS_LOOKUP:
                     val = TABS_LOOKUP[name]
                     data = sysex_tabs(val, status)
@@ -239,6 +300,8 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                         print(
                             f"[LAUNCHKEY-DAW-FILTER] CC {msg.control} -> TABS {name}"
                         )
+                    if msg.value > 0 and not state_manager.disable_realtime_display:
+                        show_temp_display(daw_outport, "TABS", name, verbose)
                 if msg.value > 0:
                     group_id = rule.get("group")
                     if group_id is not None:
