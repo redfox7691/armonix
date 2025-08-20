@@ -12,10 +12,16 @@ from launchkey_midi_filter import (
 from PyQt5 import QtCore
 
 class StateManager(QtCore.QObject):
-    def __init__(self, verbose=False, master="fantom"):
+    def __init__(
+        self,
+        verbose=False,
+        master="fantom",
+        disable_realtime_display=False,
+    ):
         super().__init__()
         self.verbose = verbose
         self.master = master
+        self.disable_realtime_display = disable_realtime_display
         self.ledbar = None
         self.master_port = None
         self.ketron_port = None
@@ -284,18 +290,7 @@ class StateManager(QtCore.QObject):
                     if self.verbose:
                         print(f"[DAW] Inviato init: {init_msg}")
 
-                    # Display DEFAULT
-                    hdr = [0x00, 0x20, 0x29, 0x02, 0x12, 0x04]
-                    txt_1 = "   Ketron EVM   "
-                    txt_2 = " Armonix v. 1.0 "
-                    data = hdr + [0x00] + [ord(c) & 0x7F for c in txt_1]
-                    if self.verbose:
-                        print(f"[DAW] set default display sysex {data}")
-                    outport.send(mido.Message("sysex", data=data))
-                    data = hdr + [0x01] + [ord(c) & 0x7F for c in txt_2]
-                    if self.verbose:
-                        print(f"[DAW] set default display sysex {data}")
-                    outport.send(mido.Message("sysex", data=data))
+                    launchkey_midi_filter.init_default_display(outport, verbose=self.verbose)
 
                     # coloro i pulsanti che hanno la configurazione
                     mode_to_channel = { "stationary": 0, "flashing": 1, "pulsing": 2 }

@@ -13,12 +13,21 @@ def main():
         default='fantom',
         help='Specifica la master keyboard collegata'
     )
+    parser.add_argument(
+        '--disable_realtime_display',
+        action='store_true',
+        help='Disabilita la visualizzazione dei messaggi di controllo in tempo reale'
+    )
     args = parser.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
 
     # Lo StateManager gestisce tutto lo stato, i led, e il logging
-    state_manager = StateManager(verbose=args.verbose, master=args.master)
+    state_manager = StateManager(
+        verbose=args.verbose,
+        master=args.master,
+        disable_realtime_display=args.disable_realtime_display,
+    )
     led_bar = LedBar(states_getter=state_manager.get_led_states)
     state_manager.set_ledbar(led_bar)
     led_bar.set_state_manager(state_manager)
