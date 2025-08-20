@@ -41,7 +41,7 @@
     { "control": 105,  "channel":  0,  "type": "FOOTSWITCH", "name": "TALK ON/OFF" , "color": 1},
     { "control": 106,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE UP", "color": 47},
     { "control": 107,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE DOWN", "color": 47},
-    { "control": 108,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICETR.ON/OFF", "color": 3 },
+    { "control": 108,  "channel": 15,  "type": "CUSTOM", "name": "VOICETRON SWITCH", "color_on": 3, "color_off": 0 },
     { "control": 37,   "channel": 15,  "type": "FOOTSWITCH", "name": "Drum Mute", "color": 15 },
     { "control": 53,   "channel": 15,  "type": "CC", "newval": 104, "name": "Drum", "lcd_index": 80 },
     { "control": 38,   "channel": 15,  "type": "FOOTSWITCH", "name": "Bass Mute", "color": 7 },

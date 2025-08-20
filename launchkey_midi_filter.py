@@ -14,7 +14,9 @@ from sysex_utils import (
     sysex_tabs,
     sysex_footswitch_std,
     sysex_footswitch_ext,
+    sysex_custom,
 )
+from custom_sysex_lookup import CUSTOM_SYSEX_LOOKUP
 
 
 # --- Config loading -------------------------------------------------------
@@ -88,6 +90,8 @@ def _load_launchkey_filters(path):
 
 LAUNCHKEY_GROUPS = {}
 LAUNCHKEY_FILTERS = _load_launchkey_filters(_config_path)
+
+CUSTOM_TOGGLE_STATES = {}
 
 _display_timer = None
 _default_lines = ("", "")
@@ -235,6 +239,30 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
             status = 0x7F if is_on else 0x00
             rtype = rule.get("type")
             name = rule.get("name")
+            if rtype == "CUSTOM" and name in CUSTOM_SYSEX_LOOKUP:
+                if is_on:
+                    custom = CUSTOM_SYSEX_LOOKUP[name]
+                    state = CUSTOM_TOGGLE_STATES.get(name, False)
+                    action = "on" if not state else "off"
+                    param = custom["switch_map"][action]
+                    data = sysex_custom(custom["format"], param)
+                    send_sysex_to_ketron(_ketron_outport, data)
+                    color_key = "color_on" if action == "on" else "color_off"
+                    _send_color(
+                        daw_outport,
+                        "NOTE",
+                        msg.note,
+                        rule.get(color_key),
+                        rule.get("colormode", "static"),
+                    )
+                    CUSTOM_TOGGLE_STATES[name] = not state
+                    if verbose:
+                        print(
+                            f"[LAUNCHKEY-DAW-FILTER] NOTE -> CUSTOM {name} {action.upper()}"
+                        )
+                    if not state_manager.disable_realtime_display:
+                        show_temp_display(daw_outport, "CUSTOM", name, verbose)
+                return
             if rtype == "FOOTSWITCH" and name in FOOTSWITCH_LOOKUP:
                 val = FOOTSWITCH_LOOKUP[name]
                 data = (
@@ -276,6 +304,30 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
         if rule:
             rtype = rule.get("type")
             name = rule.get("name")
+            if rtype == "CUSTOM" and name in CUSTOM_SYSEX_LOOKUP:
+                if msg.value > 0:
+                    custom = CUSTOM_SYSEX_LOOKUP[name]
+                    state = CUSTOM_TOGGLE_STATES.get(name, False)
+                    action = "on" if not state else "off"
+                    param = custom["switch_map"][action]
+                    data = sysex_custom(custom["format"], param)
+                    send_sysex_to_ketron(_ketron_outport, data)
+                    color_key = "color_on" if action == "on" else "color_off"
+                    _send_color(
+                        daw_outport,
+                        "CC",
+                        msg.control,
+                        rule.get(color_key),
+                        rule.get("colormode", "static"),
+                    )
+                    CUSTOM_TOGGLE_STATES[name] = not state
+                    if verbose:
+                        print(
+                            f"[LAUNCHKEY-DAW-FILTER] CC {msg.control} -> CUSTOM {name} {action.upper()}"
+                        )
+                    if not state_manager.disable_realtime_display:
+                        show_temp_display(daw_outport, "CUSTOM", name, verbose)
+                return
             if rtype in ("FOOTSWITCH", "TABS"):
                 status = 0x7F if msg.value > 0 else 0x00
                 if rtype == "FOOTSWITCH" and name in FOOTSWITCH_LOOKUP:
