@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import threading
@@ -12,6 +13,14 @@ from tabs_lookup import TABS_LOOKUP
 from custom_sysex_lookup import CUSTOM_SYSEX_LOOKUP
 
 
+DEBUG = False
+
+
+def debug_print(*args, **kwargs):
+    if DEBUG:
+        print(*args, **kwargs)
+
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, "launchkey_config.json")
 
@@ -23,9 +32,12 @@ CONFIG_PATH = os.path.join(BASE_DIR, "launchkey_config.json")
 
 def _find_launchkey_port(port_list):
     """Return the first Launchkey DAW port from the given list."""
+    debug_print("Searching for Launchkey ports in", port_list)
     for name in port_list:
         if "Launchkey" in name and "DAW" in name:
+            debug_print("Found Launchkey port:", name)
             return name
+    debug_print("No Launchkey port found")
     return None
 
 
@@ -43,6 +55,9 @@ def _send_color(outport, section, pid, color, mode="static"):
         msg = mido.Message("note_on", channel=chan, note=pid, velocity=val)
     else:
         msg = mido.Message("control_change", channel=chan, control=pid, value=val)
+    debug_print(
+        f"Sending color: section={section} pid={pid} color={val} mode={colormode}"
+    )
     outport.send(msg)
 
 
@@ -59,6 +74,7 @@ class MidiListener(threading.Thread):
 
     def run(self):
         for msg in self.port:
+            debug_print("Received MIDI:", msg)
             self.callback(msg)
 
 
@@ -245,7 +261,9 @@ class ConfigWindow(QtWidgets.QWidget):
         else:
             entries.append(entry)
 
+    @QtCore.pyqtSlot(object)
     def handle_midi(self, msg):
+        debug_print("Handling MIDI:", msg)
         if (
             self.current_color_dialog
             and msg.type == "control_change"
@@ -284,18 +302,27 @@ class ConfigWindow(QtWidgets.QWidget):
 # Application startup
 # ---------------------------------------------------------------------------
 
-def main():
+
+def main(debug=False):
+    global DEBUG
+    DEBUG = debug
+    if DEBUG:
+        debug_print("Debug mode enabled")
+
     out_name = _find_launchkey_port(mido.get_output_names())
     if out_name is None:
         raise RuntimeError("Launchkey MIDI output not found")
+    debug_print("Opening output port:", out_name)
     outport = mido.open_output(out_name)
 
     # Enable DAW mode
     daw_on = mido.Message("note_on", channel=15, note=12, velocity=127)
+    debug_print("Enabling DAW mode")
     outport.send(daw_on)
 
     # Ensure DAW mode is disabled on exit
     def _disable_daw():
+        debug_print("Disabling DAW mode")
         outport.send(mido.Message("note_on", channel=15, note=12, velocity=0))
 
     atexit.register(_disable_daw)
@@ -316,4 +343,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Configure Launchkey colors")
+    parser.add_argument(
+        "--debug", action="store_true", help="Stampa informazioni di debug"
+    )
+    args = parser.parse_args()
+    main(debug=args.debug)
