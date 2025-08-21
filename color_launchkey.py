@@ -24,6 +24,12 @@ def debug_print(*args, **kwargs):
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, "launchkey_config.json")
 
+# CC numbers corresponding to faders/pots that should be ignored when
+# assigning controls.
+IGNORED_CONTROLS = set(range(21, 29)) | set(range(53, 61))
+COLOR_FADER_CC = 61
+COLOR_FADER_CHANNEL = 15  # 0-based (MIDI channel 16)
+
 
 # ---------------------------------------------------------------------------
 # MIDI utilities
@@ -122,7 +128,7 @@ class ColorPickerDialog(QtWidgets.QDialog):
 class AssignmentDialog(QtWidgets.QDialog):
     """Dialog for choosing action type, name and colors."""
 
-    def __init__(self, outport, section, pid, parent=None):
+    def __init__(self, outport, section, pid, parent=None, existing=None):
         super().__init__(parent)
         self.setWindowTitle(f"Configura {section} {pid}")
         self.outport = outport
@@ -141,11 +147,33 @@ class AssignmentDialog(QtWidgets.QDialog):
         self.color_off_btn.clicked.connect(lambda: self._pick_color("off"))
 
         self.type_box.currentTextChanged.connect(self._populate_actions)
-        self._populate_actions(self.type_box.currentText())
 
         self.color = None
         self.color_on = None
         self.color_off = None
+
+        # Populate actions and apply existing configuration if present
+        if existing and existing.get("type"):
+            t = existing.get("type")
+            self.type_box.setCurrentText(t)
+            self._populate_actions(t)
+            name = existing.get("name")
+            if name:
+                idx = self.action_box.findText(name)
+                if idx >= 0:
+                    self.action_box.setCurrentIndex(idx)
+            self.color = existing.get("color")
+            self.color_on = existing.get("color_on")
+            self.color_off = existing.get("color_off")
+        else:
+            self._populate_actions(self.type_box.currentText())
+
+        if self.color is not None:
+            self.color_btn.setText(f"Colore ({self.color})")
+        if self.color_on is not None:
+            self.color_on_btn.setText(f"Colore ON ({self.color_on})")
+        if self.color_off is not None:
+            self.color_off_btn.setText(f"Colore OFF ({self.color_off})")
 
         form = QtWidgets.QFormLayout()
         form.addRow("Tipo", self.type_box)
@@ -193,10 +221,16 @@ class AssignmentDialog(QtWidgets.QDialog):
         color = dlg.get_color()
         if which == "on":
             self.color_on = color
+            if color is not None:
+                self.color_on_btn.setText(f"Colore ON ({color})")
         elif which == "off":
             self.color_off = color
+            if color is not None:
+                self.color_off_btn.setText(f"Colore OFF ({color})")
         else:
             self.color = color
+            if color is not None:
+                self.color_btn.setText(f"Colore ({color})")
 
     def get_entry(self):
         if self.exec_() != QtWidgets.QDialog.Accepted:
@@ -268,23 +302,32 @@ class ConfigWindow(QtWidgets.QWidget):
         if (
             self.current_color_dialog
             and msg.type == "control_change"
-            and msg.control == 61
-            and msg.channel == 15
+            and msg.control == COLOR_FADER_CC
+            and msg.channel == COLOR_FADER_CHANNEL
         ):
             self.current_color_dialog.update_color(msg.value)
             return
 
         if msg.type == "note_on" and msg.velocity > 0:
-            dlg = AssignmentDialog(self.outport, "NOTE", msg.note, self)
+            existing = next(
+                (e for e in self.config.get("NOTE", []) if e.get("note") == msg.note),
+                None,
+            )
+            dlg = AssignmentDialog(self.outport, "NOTE", msg.note, self, existing)
             entry = dlg.get_entry()
             if entry:
                 self._update_entry("NOTE", "note", msg.note, entry)
         elif (
             msg.type == "control_change"
-            and msg.control != 61
+            and msg.control not in IGNORED_CONTROLS
+            and msg.control != COLOR_FADER_CC
             and msg.value > 0
         ):
-            dlg = AssignmentDialog(self.outport, "CC", msg.control, self)
+            existing = next(
+                (e for e in self.config.get("CC", []) if e.get("control") == msg.control),
+                None,
+            )
+            dlg = AssignmentDialog(self.outport, "CC", msg.control, self, existing)
             entry = dlg.get_entry()
             if entry:
                 self._update_entry("CC", "control", msg.control, entry)
