@@ -212,7 +212,7 @@ class ConfigWindow(QtWidgets.QWidget):
         super().__init__()
         self.setWindowTitle("Launchkey Config")
         self.outport = outport
-        self.config = {"NOTE": [], "CC": []}
+        self.config = self._load_config()
         self.current_color_dialog = None
 
         self.label = QtWidgets.QLabel("Premi un controllo sulla Launchkey per configurarlo")
@@ -222,6 +222,28 @@ class ConfigWindow(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(self.label)
         layout.addWidget(self.save_btn)
+
+    def _load_config(self):
+        if not os.path.exists(CONFIG_PATH):
+            return {"NOTE": [], "CC": []}
+        with open(CONFIG_PATH) as f:
+            lines = [line for line in f if not line.strip().startswith("//")]
+        try:
+            data = json.loads("".join(lines))
+        except json.JSONDecodeError:
+            return {"NOTE": [], "CC": []}
+        data.setdefault("NOTE", [])
+        data.setdefault("CC", [])
+        return data
+
+    def _update_entry(self, section, key, pid, entry):
+        entries = self.config.setdefault(section, [])
+        for i, existing in enumerate(entries):
+            if existing.get(key) == pid:
+                entries[i] = entry
+                break
+        else:
+            entries.append(entry)
 
     def handle_midi(self, msg):
         if (
@@ -237,7 +259,7 @@ class ConfigWindow(QtWidgets.QWidget):
             dlg = AssignmentDialog(self.outport, "NOTE", msg.note, self)
             entry = dlg.get_entry()
             if entry:
-                self.config["NOTE"].append(entry)
+                self._update_entry("NOTE", "note", msg.note, entry)
         elif (
             msg.type == "control_change"
             and msg.control != 61
@@ -246,7 +268,7 @@ class ConfigWindow(QtWidgets.QWidget):
             dlg = AssignmentDialog(self.outport, "CC", msg.control, self)
             entry = dlg.get_entry()
             if entry:
-                self.config["CC"].append(entry)
+                self._update_entry("CC", "control", msg.control, entry)
 
     def save_config(self):
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
