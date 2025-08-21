@@ -218,7 +218,21 @@ class AssignmentDialog(QtWidgets.QDialog):
             "Scegli colore",
             self,
         )
-        color = dlg.get_color()
+
+        # Inform the top-level window about the currently active color
+        # picker so that it can forward MIDI messages from the fader to the
+        # dialog.  Without this the dialog never receives the updates and the
+        # selected control does not change colour.
+        parent = self.parent()
+        if parent is not None and hasattr(parent, "current_color_dialog"):
+            parent.current_color_dialog = dlg
+
+        try:
+            color = dlg.get_color()
+        finally:
+            if parent is not None and hasattr(parent, "current_color_dialog"):
+                parent.current_color_dialog = None
+
         if which == "on":
             self.color_on = color
             if color is not None:
