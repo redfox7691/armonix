@@ -2,6 +2,7 @@ import json
 import os
 import threading
 from datetime import datetime
+import atexit
 
 import mido
 from PyQt5 import QtCore, QtWidgets
@@ -19,9 +20,11 @@ CONFIG_PATH = os.path.join(BASE_DIR, "launchkey_config.json")
 # MIDI utilities
 # ---------------------------------------------------------------------------
 
-def _find_launchkey_port(prefix):
-    for name in mido.get_ioport_names():
-        if "Launchkey" in name and prefix in name:
+
+def _find_launchkey_port(port_list):
+    """Return the first Launchkey DAW port from the given list."""
+    for name in port_list:
+        if "Launchkey" in name and "DAW" in name:
             return name
     return None
 
@@ -49,7 +52,7 @@ class MidiListener(threading.Thread):
     def __init__(self, callback):
         super().__init__(daemon=True)
         self.callback = callback
-        in_name = _find_launchkey_port("(DAW) 0") or _find_launchkey_port("(DAW)")
+        in_name = _find_launchkey_port(mido.get_input_names())
         if in_name is None:
             raise RuntimeError("Launchkey MIDI input not found")
         self.port = mido.open_input(in_name)
@@ -260,10 +263,20 @@ class ConfigWindow(QtWidgets.QWidget):
 # ---------------------------------------------------------------------------
 
 def main():
-    out_name = _find_launchkey_port("(DAW) 1") or _find_launchkey_port("(DAW)")
+    out_name = _find_launchkey_port(mido.get_output_names())
     if out_name is None:
         raise RuntimeError("Launchkey MIDI output not found")
     outport = mido.open_output(out_name)
+
+    # Enable DAW mode
+    daw_on = mido.Message("note_on", channel=15, note=12, velocity=127)
+    outport.send(daw_on)
+
+    # Ensure DAW mode is disabled on exit
+    def _disable_daw():
+        outport.send(mido.Message("note_on", channel=15, note=12, velocity=0))
+
+    atexit.register(_disable_daw)
 
     app = QtWidgets.QApplication([])
     win = ConfigWindow(outport)
