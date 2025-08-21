@@ -14,8 +14,8 @@
 // mic: rosso
 {
   "SELECTOR_GROUPS": [
-    { "group_id": 1, "on_color": 20, "off_color": 23 },
-    { "group_id": 2, "on_color": 40, "off_color": 43 }
+    { "group_id": 1, "on_color": 21, "off_color": 0 },
+    { "group_id": 2, "on_color": 41, "off_color": 0 }
   ],
   "NOTE": [
     { "note":  96,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 1", "group": 2, "color": 0, "colormode": "static" },
@@ -23,13 +23,13 @@
     { "note":  98,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 3", "group": 2, "color": 0, "colormode": "static" },
     { "note":  99,  "channel": 0,  "type": "FOOTSWITCH", "name": "STYLE VOICE 4", "group": 2, "color": 0, "colormode": "static" },
     { "note": 100,  "channel": 0,  "type": "TABS", "name": "PIANIST", "color": 45, "colormode": "static" },
-    { "note": 102,  "channel": 0,  "type": "CUSTOM", "name": "MICRO 1 SWITCH", "color_on": 5, "color_off": 4,"colormode": "static" },
-    { "note": 103,  "channel": 0,  "type": "CUSTOM", "name": "VOICETRON SWITCH", "color_on": 53, "color_off": 52, "colormode": "static" },
+    { "note": 102,  "channel": 0,  "type": "CUSTOM", "name": "MICRO 1 SWITCH", "color": 4, "color_on": 5, "color_off": 7,"colormode": "static" },
+    { "note": 103,  "channel": 0,  "type": "CUSTOM", "name": "VOICETRON SWITCH", "color": 52, "color_on": 53, "color_off": 55, "colormode": "static" },
     { "note": 112,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.A", "group": 1, "color": 23, "colormode": "static" },
     { "note": 113,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.B", "group": 1, "color": 23, "colormode": "static" },
     { "note": 114,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.C", "group": 1, "color": 23, "colormode": "static" },
     { "note": 115,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.D", "group": 1, "color": 23, "colormode": "static" },
-    { "note": 116,  "channel": 0,  "type": "FOOTSWITCH", "name": "BREAK", "color": 87, "colormode": "static" },
+    { "note": 116,  "channel": 0,  "type": "FOOTSWITCH", "name": "BREAK", "color": 65, "colormode": "static" },
     { "note": 117,  "channel": 0,  "type": "FOOTSWITCH", "name": "FILL", "color": 75, "colormode": "static" },
     { "note": 118,  "channel": 0,  "type": "FOOTSWITCH", "name": "VARI", "color": 16, "colormode": "static" },
     { "note": 119,  "channel": 0,  "type": "FOOTSWITCH", "name": "HALF BAR", "color": 13, "colormode": "static" }
@@ -42,6 +42,8 @@
     { "control": 106,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE UP", "color": 47},
     { "control": 107,  "channel": 15,  "type": "FOOTSWITCH", "name": "VOICE DOWN", "color": 47},
     { "control": 37,   "channel": 15,  "type": "FOOTSWITCH", "name": "Drum Mute", "color": 15 },
+    { "control": 51,   "channel": 15,  "type": "TABS", "name": "MICRO" },
+    { "control": 52,   "channel": 15,  "type": "FOOTSWITCH", "name": "VOICETRON MENU" },
     { "control": 53,   "channel": 15,  "type": "CC", "newval": 104, "name": "Drum", "lcd_index": 80 },
     { "control": 38,   "channel": 15,  "type": "FOOTSWITCH", "name": "Bass Mute", "color": 7 },
     { "control": 54,   "channel": 15,  "type": "CC", "newval": 105, "name": "Bass", "lcd_index": 81 },
@@ -62,6 +64,7 @@
     { "control": 27,   "channel": 15,  "type": "CC", "newval": 117, "name": "Micro", "lcd_index": 62 },
     { "control": 28,   "channel": 15,  "type": "CC", "newval": 118, "name": "Voicetron", "lcd_index": 63 },
     { "control":  76,  "channel": 15,  "type": "FOOTSWITCH", "name": "TAP" },
+    { "control":  77,  "channel": 15,  "type": "FOOTSWITCH", "name": "START/STOP" },
     { "control": 115,  "channel": 15,  "type": "FOOTSWITCH", "name": "INTRO/END1" },
     { "control": 116,  "channel": 15,  "type": "FOOTSWITCH", "name": "INTRO/END2" },
     { "control": 117,  "channel": 15,  "type": "FOOTSWITCH", "name": "INTRO/END3" },
