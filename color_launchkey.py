@@ -132,8 +132,6 @@ class AssignmentDialog(QtWidgets.QDialog):
         self.type_box = QtWidgets.QComboBox()
         self.type_box.addItems(["TABS", "FOOTSWITCH", "CUSTOM"])
         self.action_box = QtWidgets.QComboBox()
-        self.type_box.currentTextChanged.connect(self._populate_actions)
-        self._populate_actions(self.type_box.currentText())
 
         self.color_btn = QtWidgets.QPushButton("Colore")
         self.color_btn.clicked.connect(self._pick_color)
@@ -141,6 +139,9 @@ class AssignmentDialog(QtWidgets.QDialog):
         self.color_on_btn.clicked.connect(lambda: self._pick_color("on"))
         self.color_off_btn = QtWidgets.QPushButton("Colore OFF")
         self.color_off_btn.clicked.connect(lambda: self._pick_color("off"))
+
+        self.type_box.currentTextChanged.connect(self._populate_actions)
+        self._populate_actions(self.type_box.currentText())
 
         self.color = None
         self.color_on = None
