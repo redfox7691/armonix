@@ -41,4 +41,37 @@ CUSTOM_SYSEX_LOOKUP = {
             "on": 0x01
         }
     },
+    "ARRA_A_BREAK": {
+        "levels": [
+            {
+                "name": "ARRA_A_BREAK",
+                "min": 100,
+                "max": 127,
+                "color": 23,
+                "sysex": [
+                    [0x26, 0x79, 0x03, 0x03, 0x7F],
+                    [0x26, 0x79, 0x03, 0x16, 0x7F],
+                    [0x26, 0x79, 0x03, 0x16, 0x00],
+                ],
+            },
+            {
+                "name": "NOTE_A",
+                "min": 1,
+                "max": 99,
+                "color": 5,
+                "sysex": [
+                    [0x26, 0x79, 0x03, 0x03, 0x7F],
+                ],
+            },
+            {
+                "name": "NOTE_A",
+                "min": 0,
+                "max": 0,
+                "color": 0,
+                "sysex": [
+                    [0x26, 0x79, 0x03, 0x03, 0x00],
+                ],
+            },
+        ],
+    },
 }

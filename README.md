@@ -53,6 +53,48 @@ vengono inoltrati al Ketron, mentre gli altri vengono scartati.
 
 Il file `keypad_config.json` definisce la mappatura tra i tasti del tastierino e i messaggi Sysex o Footswitch da inviare al Ketron. È possibile modificare questo file per adattare i comandi alle proprie esigenze.
 
+## Pulsanti CUSTOM con livelli di velocità
+
+È possibile associare ai pad della Launchkey messaggi Sysex differenti a seconda della **velocity** ricevuta. Nel file
+`custom_sysex_lookup.py` si definiscono più livelli tramite la chiave `levels`, specificando per ciascuno:
+
+- intervallo di velocity (`min`/`max`)
+- nome visualizzato
+- colore opzionale del pad
+- lista di messaggi Sysex da inviare
+
+Esempio semplificato:
+
+```python
+"ARRA_A_BREAK": {
+    "levels": [
+        {
+            "name": "ARRA_A_BREAK",
+            "min": 100,
+            "max": 127,
+            "color": 23,
+            "sysex": [ [0x26, 0x79, 0x03, 0x03, 0x7F] ]
+        },
+        {
+            "name": "NOTE_A",
+            "min": 1,
+            "max": 99,
+            "color": 5,
+            "sysex": [ [0x26, 0x79, 0x03, 0x03, 0x7F] ]
+        }
+    ]
+}
+```
+
+Nel `launchkey_config.json` basta poi mappare il pad con `"type": "CUSTOM"` e il relativo `name`:
+
+```json
+{ "note": 112, "channel": 0, "type": "CUSTOM", "name": "ARRA_A_BREAK", "group": 1, "color": 23, "colormode": "static" }
+```
+
+Se un livello definisce un colore, questo sovrascrive quello standard; in caso contrario viene usato il comportamento normale
+del gruppo o quello indicato nella configurazione.
+
 ## Adattamenti ad altri setup
 
 La logica è suddivisa in moduli (gestione dello stato, filtro MIDI, listener per il tastierino), rendendo relativamente semplice l'estensione a strumenti o controller diversi. Basterà modificare le mappature e, se necessario, aggiungere nuovi filtri MIDI.
