@@ -240,29 +240,69 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
             rtype = rule.get("type")
             name = rule.get("name")
             if rtype == "CUSTOM" and name in CUSTOM_SYSEX_LOOKUP:
-                if is_on:
-                    custom = CUSTOM_SYSEX_LOOKUP[name]
-                    state = CUSTOM_TOGGLE_STATES.get(name, False)
-                    action = "on" if not state else "off"
-                    param = custom["switch_map"][action]
-                    data = sysex_custom(custom["format"], param)
-                    send_sysex_to_ketron(_ketron_outport, data)
-                    color_key = "color_on" if action == "on" else "color_off"
-                    _send_color(
-                        daw_outport,
-                        "NOTE",
-                        msg.note,
-                        rule.get(color_key),
-                        rule.get("colormode", "static"),
-                    )
-                    CUSTOM_TOGGLE_STATES[name] = not state
-                    if verbose:
-                        print(
-                            f"[LAUNCHKEY-DAW-FILTER] NOTE -> CUSTOM {name} {action.upper()}"
+                custom = CUSTOM_SYSEX_LOOKUP[name]
+                if "switch_map" in custom:
+                    if is_on:
+                        state = CUSTOM_TOGGLE_STATES.get(name, False)
+                        action = "on" if not state else "off"
+                        param = custom["switch_map"][action]
+                        data = sysex_custom(custom["format"], param)
+                        send_sysex_to_ketron(_ketron_outport, data)
+                        color_key = "color_on" if action == "on" else "color_off"
+                        _send_color(
+                            daw_outport,
+                            "NOTE",
+                            msg.note,
+                            rule.get(color_key),
+                            rule.get("colormode", "static"),
                         )
-                    if not state_manager.disable_realtime_display:
-                        show_temp_display(daw_outport, "CUSTOM", name, verbose)
-                return
+                        CUSTOM_TOGGLE_STATES[name] = not state
+                        if verbose:
+                            print(
+                                f"[LAUNCHKEY-DAW-FILTER] NOTE -> CUSTOM {name} {action.upper()}"
+                            )
+                        if not state_manager.disable_realtime_display:
+                            show_temp_display(daw_outport, "CUSTOM", name, verbose)
+                    return
+                elif "levels" in custom:
+                    velocity = msg.velocity if msg.type == "note_on" else 0
+                    level = next(
+                        (
+                            lvl
+                            for lvl in custom["levels"]
+                            if lvl["min"] <= velocity <= lvl["max"]
+                        ),
+                        None,
+                    )
+                    if level:
+                        for data in level["sysex"]:
+                            send_sysex_to_ketron(_ketron_outport, data)
+                        if is_on:
+                            group_id = rule.get("group")
+                            if group_id is not None:
+                                _apply_group_colors(
+                                    daw_outport,
+                                    "NOTE",
+                                    msg.note,
+                                    group_id,
+                                    rule.get("colormode", "static"),
+                                )
+                        if "color" in level:
+                            _send_color(
+                                daw_outport,
+                                "NOTE",
+                                msg.note,
+                                level["color"],
+                                rule.get("colormode", "static"),
+                            )
+                        disp_name = level.get("name", name)
+                        if verbose:
+                            print(
+                                f"[LAUNCHKEY-DAW-FILTER] NOTE -> CUSTOM {disp_name} (vel {velocity})"
+                            )
+                        if not state_manager.disable_realtime_display:
+                            show_temp_display(daw_outport, "CUSTOM", disp_name, verbose)
+                        return
             if rtype == "FOOTSWITCH" and name in FOOTSWITCH_LOOKUP:
                 val = FOOTSWITCH_LOOKUP[name]
                 data = (

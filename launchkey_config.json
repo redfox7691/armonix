@@ -25,7 +25,7 @@
     { "note": 100,  "channel": 0,  "type": "TABS", "name": "PIANIST", "color": 45, "colormode": "static" },
     { "note": 102,  "channel": 0,  "type": "CUSTOM", "name": "MICRO 1 SWITCH", "color": 4, "color_on": 5, "color_off": 7,"colormode": "static" },
     { "note": 103,  "channel": 0,  "type": "CUSTOM", "name": "VOICETRON SWITCH", "color": 52, "color_on": 53, "color_off": 55, "colormode": "static" },
-    { "note": 112,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.A", "group": 1, "color": 23, "colormode": "static" },
+    { "note": 112,  "channel": 0,  "type": "CUSTOM", "name": "ARRA_A_BREAK", "group": 1, "color": 23, "colormode": "static" },
     { "note": 113,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.B", "group": 1, "color": 23, "colormode": "static" },
     { "note": 114,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.C", "group": 1, "color": 23, "colormode": "static" },
     { "note": 115,  "channel": 0,  "type": "FOOTSWITCH", "name": "ARR.D", "group": 1, "color": 23, "colormode": "static" },
