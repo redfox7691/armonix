@@ -1,13 +1,14 @@
 # Armonix
 
-Armonix è un piccolo sistema di controllo MIDI pensato per pilotare un Ketron EVM sfruttando una tastiera Roland Fantom 07 e un tastierino USB meccanico. Il progetto è stato testato su Linux Mint 21/24 e può essere adattato con facilità ad altre configurazioni.
+Armonix è un piccolo sistema di controllo MIDI pensato per pilotare un Ketron EVM sfruttando una tastiera midi (attualmente ci sono i driver per la Roland Fantom 07 e per la Novation Launchkey 88 [MK3]) e un tastierino USB meccanico. Il progetto è stato testato su Linux Mint 21/24 e può essere adattato con facilità ad altre configurazioni.
 
 ## Hardware consigliato
 
 - **Ketron EVM**
 - **Roland Fantom 07** (funziona anche con i modelli 06 e 08)
+- **Novation Launchkey [MK3]** (testato con il modello 88 tasti)
 - Tastierino USB con 12 tasti e 2 encoder
-- Laptop Linux (ad esempio Linux Mint) con server VNC per la console Ketron
+- Laptop Linux touchscreen (ad esempio Linux Mint) con server VNC per la console Ketron
 - iPad collegato via **MIDI over BLE** per la visualizzazione degli spartiti
 
 ## Installazione
