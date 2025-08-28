@@ -18,6 +18,10 @@ from sysex_utils import (
 )
 from custom_sysex_lookup import CUSTOM_SYSEX_LOOKUP
 
+MASTER_PORT_KEYWORD = "Launchkey MK3 88 LKMK3 MIDI In"
+DAW_IN_PORT_KEYWORD = "Launchkey MK3 88 LKMK3 DAW In"
+DAW_OUT_PORT_KEYWORD = "Launchkey MK3 88 LKMK3 DAW In"
+
 
 # --- Config loading -------------------------------------------------------
 
@@ -95,6 +99,12 @@ CUSTOM_TOGGLE_STATES = {}
 
 _display_timer = None
 _default_lines = ("", "")
+
+_daw_connected = False
+_daw_in_port = None
+_daw_out_port = None
+_daw_listener_thread = None
+_daw_listener_stop = None
 
 
 def _send_display(outport, line1, line2, verbose=False):
@@ -184,9 +194,156 @@ def _apply_group_colors(outport, section, pid, group_id, mode="static"):
         _send_color(outport, sec, member_pid, off_color, mode)
 
 
+# --- DAW helper functions -------------------------------------------------
+
+def poll_ports(state_manager):
+    """Handle Launchkey-specific port detection and listeners."""
+    global _daw_connected, _daw_in_port, _daw_out_port
+
+    daw_in_port = state_manager.find_port(DAW_IN_PORT_KEYWORD)
+    daw_out_port = state_manager.find_output_port(DAW_OUT_PORT_KEYWORD)
+
+    if (
+        state_manager.ketron_port
+        and daw_in_port
+        and daw_out_port
+        and not _daw_connected
+    ):
+        _daw_in_port = daw_in_port
+        _daw_out_port = daw_out_port
+        _daw_connected = True
+        if state_manager.verbose:
+            print(f"Porta DAW collegata: in={daw_in_port}, out={daw_out_port}")
+        start_daw_listener(state_manager)
+    elif _daw_connected and (
+        not state_manager.ketron_port or not daw_in_port or not daw_out_port
+    ):
+        if state_manager.verbose:
+            print("Porta DAW scollegata")
+        _daw_connected = False
+        _daw_in_port = None
+        _daw_out_port = None
+        stop_daw_listener()
+
+
+def start_daw_listener(state_manager):
+    """Start listener thread for Launchkey DAW port."""
+    global _daw_listener_thread, _daw_listener_stop
+    if _daw_listener_thread and _daw_listener_thread.is_alive():
+        return
+    _daw_listener_stop = threading.Event()
+
+    def daw_listener():
+        if state_manager.verbose:
+            print(
+                f"[DAW-THREAD] Avvio thread: porta DAW in={_daw_in_port}, out={_daw_out_port}"
+            )
+        try:
+            with mido.open_input(_daw_in_port) as inport, mido.open_output(
+                _daw_out_port, exclusive=False
+            ) as outport:
+                init_msg = mido.Message("note_on", channel=15, note=0x0C, velocity=0x7F)
+                outport.send(init_msg)
+                if state_manager.verbose:
+                    print(f"[DAW] Inviato init: {init_msg}")
+                init_msg = mido.Message("note_off", channel=15, note=0x0D, velocity=0x7F)
+                outport.send(init_msg)
+                if state_manager.verbose:
+                    print(f"[DAW] Inviato init: {init_msg}")
+                init_msg = mido.Message("note_off", channel=15, note=0x0A, velocity=0x7F)
+                outport.send(init_msg)
+                if state_manager.verbose:
+                    print(f"[DAW] Inviato init: {init_msg}")
+                init_msg = mido.Message("note_on", channel=15, note=0x0C, velocity=0x7F)
+                outport.send(init_msg)
+                if state_manager.verbose:
+                    print(f"[DAW] Inviato init: {init_msg}")
+
+                init_default_display(outport, verbose=state_manager.verbose)
+                CUSTOM_TOGGLE_STATES.clear()
+
+                mode_to_channel = {"stationary": 0, "flashing": 1, "pulsing": 2}
+                mode_alias = {"static": "stationary"}
+
+                if state_manager.verbose:
+                    print("[DAW] Invio i colori dei pulsanti se sono definiti")
+
+                for section, ch_map in LAUNCHKEY_FILTERS.items():
+                    for ch, id_map in ch_map.items():
+                        for pid, meta in id_map.items():
+                            color = meta.get("color")
+                            if color is None:
+                                color = meta.get("color_off")
+                                if color is None:
+                                    color = meta.get("color_on")
+                            if color is not None:
+                                raw_mode = meta.get("colormode", "stationary")
+                                colormode = mode_alias.get(raw_mode, raw_mode)
+
+                                note = int(pid) & 0x7F
+                                vel = max(0, min(int(color), 127))
+                                chan = mode_to_channel.get(colormode, 0)
+
+                                if state_manager.verbose:
+                                    print(
+                                        f"[DAW] Colore {vel} {colormode} su pid {note} -> ch {chan}"
+                                    )
+
+                                if section == "NOTE":
+                                    color_msg = mido.Message(
+                                        "note_on", channel=chan, note=note, velocity=vel
+                                    )
+                                else:
+                                    color_msg = mido.Message(
+                                        "control_change", channel=chan, control=note, value=vel
+                                    )
+                                outport.send(color_msg)
+
+                            lcd_idx = meta.get("lcd_index")
+                            lcd_name = meta.get("name")
+                            if lcd_idx is not None and lcd_name:
+                                hdr = [0x00, 0x20, 0x29, 0x02, 0x12]
+                                txt = str(lcd_name)[:16]
+                                data = hdr + [0x07, int(lcd_idx) & 0x7F] + [ord(c) & 0x7F for c in txt]
+                                if state_manager.verbose:
+                                    print(f"[DAW] invio sysex {data}")
+                                outport.send(mido.Message("sysex", data=data))
+
+                if state_manager.verbose:
+                    print("[DAW] In ascolto sulla porta DAW.")
+                for msg in inport:
+                    if _daw_listener_stop.is_set():
+                        break
+                    filter_and_translate_launchkey_daw_msg(
+                        msg, outport, state_manager, verbose=state_manager.verbose
+                    )
+        except Exception as e:
+            if state_manager.verbose:
+                print(f"[DAW] Errore: {e}")
+
+    _daw_listener_thread = threading.Thread(target=daw_listener, daemon=True)
+    _daw_listener_thread.start()
+
+
+def stop_daw_listener():
+    """Stop the DAW listener thread."""
+    global _daw_listener_thread, _daw_listener_stop, _ketron_outport
+    if _daw_listener_stop:
+        _daw_listener_stop.set()
+    thread = _daw_listener_thread
+    if thread:
+        thread.join(timeout=1)
+    _daw_listener_thread = None
+    try:
+        if _ketron_outport:
+            _ketron_outport.close()
+    except Exception:
+        pass
+    _ketron_outport = None
+
 # --- Master port filter ---------------------------------------------------
 
-def filter_and_translate_launchkey_msg(
+def filter_and_translate_msg(
     msg, ketron_outport, state_manager, armonix_enabled=True, state="ready", verbose=False
 ):
     """

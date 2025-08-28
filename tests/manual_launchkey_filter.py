@@ -1,4 +1,4 @@
-"""Manual tests for `filter_and_translate_launchkey_msg`.
+"""Manual tests for `filter_and_translate_msg`.
 
 Run this file directly to verify that only messages on channel 1 (mido
 channel 0) are forwarded to the Ketron output port.
@@ -28,7 +28,7 @@ sys.modules["mido"] = mido_stub
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from launchkey_midi_filter import filter_and_translate_launchkey_msg
+from launchkey_midi_filter import filter_and_translate_msg
 
 
 class DummyPort:
@@ -55,11 +55,11 @@ def run():
 
     print("-- Sending channel 0 (should pass) --")
     msg0 = FakeMessage(channel=0)
-    filter_and_translate_launchkey_msg(msg0, port, None, verbose=True)
+    filter_and_translate_msg(msg0, port, None, verbose=True)
 
     print("-- Sending channel 1 (should be ignored) --")
     msg1 = FakeMessage(channel=1)
-    filter_and_translate_launchkey_msg(msg1, port, None, verbose=True)
+    filter_and_translate_msg(msg1, port, None, verbose=True)
 
     assert port.sent == [msg0], "Channel filtering failed"
 

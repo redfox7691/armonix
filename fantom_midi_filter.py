@@ -10,10 +10,13 @@ from sysex_utils import (
 )
 import mido
 
+MASTER_PORT_KEYWORD = "FANTOM-06 07"
+
 _last_msb = None
 _last_lsb = None
 
-def filter_and_translate_fantom_msg(msg, ketron_outport, state_manager, armonix_enabled=True, state="ready", verbose=False):
+
+def filter_and_translate_msg(msg, ketron_outport, state_manager, armonix_enabled=True, state="ready", verbose=False):
     global _last_msb, _last_lsb
 
     # --- NOTE ON/OFF ---
