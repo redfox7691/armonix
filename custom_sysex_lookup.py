@@ -45,7 +45,7 @@ CUSTOM_SYSEX_LOOKUP = {
         "levels": [
             {
                 "name": "ARRA_A_BREAK",
-                "min": 100,
+                "min": 110,
                 "max": 127,
                 "color": 55,
                 "sysex": [
@@ -56,7 +56,7 @@ CUSTOM_SYSEX_LOOKUP = {
             },
             {
                 "min": 1,
-                "max": 99,
+                "max": 109,
                 "sysex": [
                     [0x26, 0x79, 0x03, 0x03, 0x7F],
                 ],
@@ -74,7 +74,7 @@ CUSTOM_SYSEX_LOOKUP = {
         "levels": [
             {
                 "name": "ARRA_A_BREAK",
-                "min": 100,
+                "min": 110,
                 "max": 127,
                 "color": 55,
                 "sysex": [
@@ -85,7 +85,7 @@ CUSTOM_SYSEX_LOOKUP = {
             },
             {
                 "min": 1,
-                "max": 99,
+                "max": 109,
                 "sysex": [
                     [0x26, 0x79, 0x03, 0x04, 0x7F],
                 ],
@@ -103,7 +103,7 @@ CUSTOM_SYSEX_LOOKUP = {
         "levels": [
             {
                 "name": "ARRA_A_BREAK",
-                "min": 100,
+                "min": 110,
                 "max": 127,
                 "color": 55,
                 "sysex": [
@@ -114,7 +114,7 @@ CUSTOM_SYSEX_LOOKUP = {
             },
             {
                 "min": 1,
-                "max": 99,
+                "max": 109,
                 "sysex": [
                     [0x26, 0x79, 0x03, 0x05, 0x7F],
                 ],
@@ -132,7 +132,7 @@ CUSTOM_SYSEX_LOOKUP = {
         "levels": [
             {
                 "name": "ARRA_A_BREAK",
-                "min": 100,
+                "min": 110,
                 "max": 127,
                 "color": 55,
                 "sysex": [
@@ -143,7 +143,7 @@ CUSTOM_SYSEX_LOOKUP = {
             },
             {
                 "min": 1,
-                "max": 99,
+                "max": 109,
                 "sysex": [
                     [0x26, 0x79, 0x03, 0x06, 0x7F],
                 ],
