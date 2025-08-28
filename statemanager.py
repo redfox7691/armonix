@@ -2,13 +2,7 @@ import mido
 import os
 import threading
 import time
-from fantom_midi_filter import filter_and_translate_fantom_msg
-import launchkey_midi_filter
-from launchkey_midi_filter import (
-    LAUNCHKEY_FILTERS,
-    filter_and_translate_launchkey_msg,
-    filter_and_translate_launchkey_daw_msg,
-)
+import importlib
 from PyQt5 import QtCore
 
 class StateManager(QtCore.QObject):
@@ -22,6 +16,7 @@ class StateManager(QtCore.QObject):
         self.verbose = verbose
         self.master = master
         self.disable_realtime_display = disable_realtime_display
+        self.master_module = importlib.import_module(f"{master}_midi_filter")
         self.ledbar = None
         self.master_port = None
         self.ketron_port = None
@@ -44,26 +39,16 @@ class StateManager(QtCore.QObject):
         self.ble_listener_thread = None
         self.ble_listener_stop = None
 
-        # Porta DAW del Launchkey
-        self.daw_connected = False
-        self.daw_in_port = None
-        self.daw_out_port = None
-        self.daw_listener_thread = None
-        self.daw_listener_stop = None
 
     def set_ledbar(self, ledbar):
         self.ledbar = ledbar
         self.ledbar.set_animating(self.state == "waiting")
 
     def poll_ports(self):
-        if self.master == "fantom":
-            master_port = self.find_port("FANTOM-06 07")
-        else:
-            master_port = self.find_port("Launchkey MK3 88 LKMK3 MIDI In")
+        master_keyword = getattr(self.master_module, "MASTER_PORT_KEYWORD", "")
+        master_port = self.find_port(master_keyword)
         ketron_port = self.find_port("MIDI Gadget")
         ble_port = self.find_port("Bluetooth")
-        daw_in_port = self.find_port("Launchkey MK3 88 LKMK3 DAW In")
-        daw_out_port = self.find_output_port("Launchkey MK3 88 LKMK3 DAW In")
 
         # Aggiorna variabili di stato MIDI principali
         if (master_port != self.master_port) or (ketron_port != self.ketron_port):
@@ -99,28 +84,9 @@ class StateManager(QtCore.QObject):
             self.ble_port = None
             self.stop_ble_listener()
 
-        # Launchkey DAW port detection + listener
-        if (
-            self.ketron_port
-            and daw_in_port
-            and daw_out_port
-            and not self.daw_connected
-        ):
-            self.daw_in_port = daw_in_port
-            self.daw_out_port = daw_out_port
-            self.daw_connected = True
-            if self.verbose:
-                print(f"Porta DAW collegata: in={daw_in_port}, out={daw_out_port}")
-            self.start_daw_listener()
-        elif self.daw_connected and (
-            not self.ketron_port or not daw_in_port or not daw_out_port
-        ):
-            if self.verbose:
-                print("Porta DAW scollegata")
-            self.daw_connected = False
-            self.daw_in_port = None
-            self.daw_out_port = None
-            self.stop_daw_listener()
+        # Hook for master-specific port polling
+        if hasattr(self.master_module, "poll_ports"):
+            self.master_module.poll_ports(self)
 
         # Aggiorna stato dei LED
         if self.master_port and self.ketron_port:
@@ -263,122 +229,12 @@ class StateManager(QtCore.QObject):
         self.ble_listener_thread = None
 
     # -------- DAW MIDI methods --------
-    def start_daw_listener(self):
-        if self.daw_listener_thread and self.daw_listener_thread.is_alive():
-            return  # già attivo
-        self.daw_listener_stop = threading.Event()
-
-        def daw_listener():
-            if self.verbose:
-                print(f"[DAW-THREAD] Avvio thread: porta DAW in={self.daw_in_port}, out={self.daw_out_port}")
-            try:
-                with mido.open_input(self.daw_in_port) as inport, mido.open_output(self.daw_out_port, exclusive=False) as outport:
-                    init_msg = mido.Message('note_on', channel=15, note=0x0C, velocity=0x7F)
-                    outport.send(init_msg)
-                    if self.verbose:
-                        print(f"[DAW] Inviato init: {init_msg}")
-                    init_msg = mido.Message('note_off', channel=15, note=0x0D, velocity=0x7F)
-                    outport.send(init_msg)
-                    if self.verbose:
-                        print(f"[DAW] Inviato init: {init_msg}")
-                    init_msg = mido.Message('note_off', channel=15, note=0x0A, velocity=0x7F)
-                    outport.send(init_msg)
-                    if self.verbose:
-                        print(f"[DAW] Inviato init: {init_msg}")
-                    init_msg = mido.Message('note_on', channel=15, note=0x0C, velocity=0x7F)
-                    outport.send(init_msg)
-                    if self.verbose:
-                        print(f"[DAW] Inviato init: {init_msg}")
-
-                    launchkey_midi_filter.init_default_display(outport, verbose=self.verbose)
-
-                    launchkey_midi_filter.CUSTOM_TOGGLE_STATES.clear()
-
-                    # coloro i pulsanti che hanno la configurazione
-                    mode_to_channel = { "stationary": 0, "flashing": 1, "pulsing": 2 }
-                    mode_alias = { "static": "stationary" }
-
-                    if self.verbose:
-                        print("[DAW] Invio i colori dei pulsanti se sono definiti")
-
-                    for section, ch_map in LAUNCHKEY_FILTERS.items():
-                        for ch, id_map in ch_map.items():
-                            for pid, meta in id_map.items():  # pid = note/control
-                                color = meta.get("color")
-                                if color is None:
-                                    color = meta.get("color_off")
-                                    if color is None:
-                                        color = meta.get("color_on")
-                                if color is not None:
-                                    raw_mode  = meta.get("colormode", "stationary")
-                                    colormode = mode_alias.get(raw_mode, raw_mode)
-
-                                    note = int(pid) & 0x7F                 # 0..127
-                                    vel  = max(0, min(int(color), 127))    # 0..127
-                                    chan = mode_to_channel.get(colormode, 0)  # 0..15 già ok
-
-                                    if self.verbose:
-                                        print(f"[DAW] Colore {vel} {colormode} su pid {note} -> ch {chan}")
-
-                                    if section == 'NOTE':
-                                        color_msg = mido.Message("note_on", channel=chan, note=note, velocity=vel)
-                                    else:
-                                        color_msg = mido.Message("control_change", channel=chan, control=note, value=vel)
-                                    outport.send(color_msg)
-
-                                # --- NEW: popup LCD name (solo se definito in config) ---
-                                lcd_idx = meta.get("lcd_index")
-                                lcd_name = meta.get("name")
-                                if lcd_idx is not None and lcd_name:
-                                # Launchkey MK3 **88**: header 00 20 29 02 12, comando 07 = parameter name (riga alta)
-                                    hdr = [0x00, 0x20, 0x29, 0x02, 0x12]
-                                    txt = str(lcd_name)[:16]  # ~16 caratteri mostrati nel popup
-                                    data = hdr + [0x07, int(lcd_idx) & 0x7F] + [ord(c) & 0x7F for c in txt]
-                                    if self.verbose:
-                                        print(f"[DAW] invio sysex {data}")
-                                    outport.send(mido.Message("sysex", data=data))
-                                # --- END NEW ---
-
-                    if self.verbose:
-                        print("[DAW] In ascolto sulla porta DAW.")
-                    for msg in inport:
-                        if self.daw_listener_stop.is_set():
-                            break
-                        filter_and_translate_launchkey_daw_msg(msg, outport, self, verbose=self.verbose)
-            except Exception as e:
-                if self.verbose:
-                    print(f"[DAW] Errore: {e}")
-
-
-        self.daw_listener_thread = threading.Thread(target=daw_listener, daemon=True)
-        self.daw_listener_thread.start()
-
-    def stop_daw_listener(self):
-        if self.daw_listener_stop:
-            self.daw_listener_stop.set()
-        thread = self.daw_listener_thread
-        if thread:
-            thread.join(timeout=1)
-        self.daw_listener_thread = None
-        # Reset Launchkey DAW filter's Ketron outport so a new connection
-        # can be established after disconnections or device restarts.
-        try:
-            if launchkey_midi_filter._ketron_outport:
-                launchkey_midi_filter._ketron_outport.close()
-        except Exception:
-            pass
-        launchkey_midi_filter._ketron_outport = None
-
     # -------- Master MIDI methods --------
     def start_master_listener(self):
         if hasattr(self, "master_listener_thread") and self.master_listener_thread and self.master_listener_thread.is_alive():
             return  # già attivo
         self.master_listener_stop = threading.Event()
-        filter_func = (
-            filter_and_translate_fantom_msg
-            if self.master == "fantom"
-            else filter_and_translate_launchkey_msg
-        )
+        filter_func = getattr(self.master_module, "filter_and_translate_msg")
 
         def master_listener():
             if self.verbose:

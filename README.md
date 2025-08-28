@@ -1,70 +1,80 @@
 # Armonix
 
-Armonix è un piccolo sistema di controllo MIDI pensato per pilotare un Ketron EVM sfruttando una tastiera midi (attualmente ci sono i driver per la Roland Fantom 07 e per la Novation Launchkey 88 [MK3]) e un tastierino USB meccanico. Il progetto è stato testato su Linux Mint 21/24 e può essere adattato con facilità ad altre configurazioni.
+Armonix is a compact MIDI control system designed to drive a Ketron EVM
+using a MIDI keyboard and a small USB keypad.  Drivers are currently
+available for the Roland Fantom 07 and the Novation Launchkey 88 [MK3].
+The project has been tested on Linux Mint 21/24 but can be adapted to
+other environments with minimal effort.
 
-## Hardware consigliato
+## Recommended hardware
 
-- **Ketron EVM**
-- **Roland Fantom 07** (funziona anche con i modelli 06 e 08)
-- **Novation Launchkey [MK3]** (testato con il modello 88 tasti)
-- Tastierino USB con 12 tasti e 2 encoder
-- Laptop Linux touchscreen (ad esempio Linux Mint) con server VNC per la console Ketron
-- iPad collegato via **MIDI over BLE** per la visualizzazione degli spartiti
+* **Ketron EVM**
+* **Roland Fantom 07** (also works with models 06 and 08)
+* **Novation Launchkey [MK3]** (tested with the 88 key model)
+* USB keypad with 12 keys and 2 encoders
+* Linux laptop with touchscreen and VNC server for the Ketron console
+* iPad connected via **MIDI over BLE** to display sheet music
 
-## Installazione
+## Installation
 
-1. Installare Python 3 e creare un ambiente virtuale:
+1. Install Python 3 and create a virtual environment:
 
    ```bash
    python3 -m venv venv
    source venv/bin/activate
    ```
-2. Installare le dipendenze principali:
+
+2. Install the main dependencies:
 
    ```bash
    pip install mido python-rtmidi PyQt5 evdev
    ```
 
-## Avvio
+## Running
 
-Il programma principale è `main.py` e mostra una piccola barra LED di stato. Per eseguirlo:
+The main program is `main.py` which also shows a small status LED bar.
+Run it with:
 
 ```bash
 python main.py --verbose
 ```
 
-Sono inclusi due script di utilità:
+Two helper scripts are included:
 
-- `start_immortal.sh` esegue `main.py` in loop e riavvia automaticamente il programma in caso di uscita.
-- `start-touchdesk.sh` prova a collegarsi via VNC al Ketron EVM quando viene rilevata la rete corretta.
+* `start_immortal.sh` runs `main.py` in a loop and automatically restarts
+  the program if it exits.
+* `start-touchdesk.sh` tries to connect to the Ketron EVM via VNC when
+  the expected network is detected.
 
-## Test manuali
+## Manual tests
 
-Per verificare il corretto filtraggio dei messaggi della Launchkey, è disponibile
-uno script di test manuale:
+To verify the Launchkey message filter you can run the manual script:
 
 ```bash
 python tests/manual_launchkey_filter.py
 ```
 
-Questo script conferma che solo i messaggi sul canale 1 (canale 0 per mido)
-vengono inoltrati al Ketron, mentre gli altri vengono scartati.
+The script confirms that only messages on channel 1 (mido channel 0) are
+forwarded to the Ketron while others are discarded.
 
-## Configurazione del tastierino
+## Keypad configuration
 
-Il file `keypad_config.json` definisce la mappatura tra i tasti del tastierino e i messaggi Sysex o Footswitch da inviare al Ketron. È possibile modificare questo file per adattare i comandi alle proprie esigenze.
+`keypad_config.json` defines the mapping between keypad keys and Sysex or
+Footswitch messages sent to the Ketron.  Modify this file to adapt the
+commands to your needs.
 
-## Pulsanti CUSTOM con livelli di velocità
+## Custom pads with velocity levels
 
-È possibile associare ai pad della Launchkey messaggi Sysex differenti a seconda della **velocity** ricevuta. Nel file
-`custom_sysex_lookup.py` si definiscono più livelli tramite la chiave `levels`, specificando per ciascuno:
+Pads on the Launchkey can send different Sysex messages depending on the
+received **velocity**.  In `custom_sysex_lookup.py` several levels can be
+defined through the `levels` key, each specifying:
 
-- intervallo di velocity (`min`/`max`)
-- nome visualizzato
-- colore opzionale del pad
-- lista di messaggi Sysex da inviare
+* velocity range (`min`/`max`)
+* displayed name
+* optional pad colour
+* list of Sysex messages to send
 
-Esempio semplificato:
+Example:
 
 ```python
 "ARRA_A_BREAK": {
@@ -87,16 +97,20 @@ Esempio semplificato:
 }
 ```
 
-Nel `launchkey_config.json` basta poi mappare il pad con `"type": "CUSTOM"` e il relativo `name`:
+In `launchkey_config.json` the pad can then be mapped with
+`"type": "CUSTOM"` and the corresponding `name`:
 
 ```json
 { "note": 112, "channel": 0, "type": "CUSTOM", "name": "ARRA_A_BREAK", "group": 1, "color": 23, "colormode": "static" }
 ```
 
-Se un livello definisce un colore, questo sovrascrive quello standard; in caso contrario viene usato il comportamento normale
-del gruppo o quello indicato nella configurazione.
+If a level defines a colour it overrides the standard one; otherwise the
+behaviour defined by the group or configuration is used.
 
-## Adattamenti ad altri setup
+## Adapting to other setups
 
-La logica è suddivisa in moduli (gestione dello stato, filtro MIDI, listener per il tastierino), rendendo relativamente semplice l'estensione a strumenti o controller diversi. Basterà modificare le mappature e, se necessario, aggiungere nuovi filtri MIDI.
+The logic is split into modules (state management, MIDI filters, keypad
+listener) which makes it easy to extend the system to other instruments
+or controllers.  You only need to adjust the mappings and, if required,
+add new MIDI filter modules.
 
