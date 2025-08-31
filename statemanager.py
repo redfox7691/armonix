@@ -3,9 +3,15 @@ import os
 import threading
 import time
 import importlib
-from PyQt5 import QtCore
 
-class StateManager(QtCore.QObject):
+try:
+    from PyQt5 import QtCore  # type: ignore
+    QT_AVAILABLE = True
+except ImportError:  # pragma: no cover - PyQt5 is optional
+    QtCore = None
+    QT_AVAILABLE = False
+
+class StateManager(QtCore.QObject if QT_AVAILABLE else object):
     def __init__(
         self,
         verbose=False,
@@ -22,9 +28,16 @@ class StateManager(QtCore.QObject):
         self.ketron_port = None
         self.ble_port = None
         self.state = "waiting"   # 'waiting', 'ready', 'paused'
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.poll_ports)
-        self.timer.start(1000)  # Ogni secondo
+        if QT_AVAILABLE:
+            self.timer = QtCore.QTimer()
+            self.timer.timeout.connect(self.poll_ports)
+            self.timer.start(1000)  # Ogni secondo
+        else:
+            self.timer = None
+            self._polling_thread = threading.Thread(
+                target=self._polling_loop, daemon=True
+            )
+            self._polling_thread.start()
         self.led_states = ['yellow'] * 5  # All'inizio: animazione "cavalcante"
         self.anim_counter = 0
 
@@ -43,6 +56,11 @@ class StateManager(QtCore.QObject):
     def set_ledbar(self, ledbar):
         self.ledbar = ledbar
         self.ledbar.set_animating(self.state == "waiting")
+
+    def _polling_loop(self):
+        while True:
+            self.poll_ports()
+            time.sleep(1)
 
     def poll_ports(self):
         master_keyword = getattr(self.master_module, "MASTER_PORT_KEYWORD", "")

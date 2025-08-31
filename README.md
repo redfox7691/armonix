@@ -27,7 +27,9 @@ other environments with minimal effort.
 2. Install the main dependencies:
 
    ```bash
-   pip install mido python-rtmidi PyQt5 evdev
+   pip install mido python-rtmidi evdev
+   # Facoltativo per la barra LED grafica:
+   pip install PyQt5
    ```
 
 ## Running
@@ -37,6 +39,13 @@ Run it with:
 
 ```bash
 python main.py --verbose
+```
+
+To run Armonix on a machine without a display (and without installing
+PyQt5) use the headless option:
+
+```bash
+python main.py --headless
 ```
 
 Two helper scripts are included:
