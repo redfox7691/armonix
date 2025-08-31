@@ -1,7 +1,7 @@
 import sys
 import argparse
-from PyQt5 import QtWidgets
-from ledbar import LedBar
+import time
+
 from statemanager import StateManager
 
 def main():
@@ -18,9 +18,12 @@ def main():
         action='store_true',
         help='Disabilita la visualizzazione dei messaggi di controllo in tempo reale'
     )
+    parser.add_argument(
+        '--headless',
+        action='store_true',
+        help='Esegui senza GUI e senza dipendenze PyQt5'
+    )
     args = parser.parse_args()
-
-    app = QtWidgets.QApplication(sys.argv)
 
     # Lo StateManager gestisce tutto lo stato, i led, e il logging
     state_manager = StateManager(
@@ -28,11 +31,22 @@ def main():
         master=args.master,
         disable_realtime_display=args.disable_realtime_display,
     )
-    led_bar = LedBar(states_getter=state_manager.get_led_states)
-    state_manager.set_ledbar(led_bar)
-    led_bar.set_state_manager(state_manager)
 
-    sys.exit(app.exec_())
+    if args.headless:
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            pass
+    else:
+        from PyQt5 import QtWidgets
+        from ledbar import LedBar
+
+        app = QtWidgets.QApplication(sys.argv)
+        led_bar = LedBar(states_getter=state_manager.get_led_states)
+        state_manager.set_ledbar(led_bar)
+        led_bar.set_state_manager(state_manager)
+        sys.exit(app.exec_())
 
 if __name__ == '__main__':
     main()
