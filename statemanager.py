@@ -28,7 +28,7 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         self.ketron_port = None
         self.ble_port = None
         self.state = "waiting"   # 'waiting', 'ready', 'paused'
-        if QT_AVAILABLE:
+        if QT_AVAILABLE and QtCore.QCoreApplication.instance() is not None:
             self.timer = QtCore.QTimer()
             self.timer.timeout.connect(self.poll_ports)
             self.timer.start(1000)  # Ogni secondo
