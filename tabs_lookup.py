@@ -59,7 +59,7 @@ TABS_LOOKUP = {
     "ORGAN_FAM": 0x64,
     "GUITAR_FAM": 0x65,
     "BASS_FAM": 0x66,
-    "STRING_FAM": 0x67,
+    "STRINGS_FAM": 0x67,
     "BRASS_FAM": 0x68,
     "SAX_FAM": 0x69,
     "ENTER_2": 0x6A,  # Altro ENTER (attenzione ai duplicati!)
