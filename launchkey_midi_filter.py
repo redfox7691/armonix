@@ -156,7 +156,15 @@ def show_temp_display(outport, line1, line2, verbose=False):
     _display_timer.start()
 
 
-def _send_color(outport, section, pid, color, mode="static"):
+_COLOR_STATE = {}
+_PRESSED_ACTIVE = set()
+
+
+def _color_key(section, pid):
+    return (section, int(pid) & 0x7F)
+
+
+def _send_color(outport, section, pid, color, mode="static", remember=True):
     """Send a color update to the Launchkey for a pad or control."""
 
     if color is None:
@@ -169,11 +177,42 @@ def _send_color(outport, section, pid, color, mode="static"):
     val = max(0, min(int(color), 127))
     pid = int(pid) & 0x7F
 
+    if remember:
+        _COLOR_STATE[_color_key(section, pid)] = (val, colormode)
+
     if section == "NOTE":
         msg = mido.Message("note_on", channel=chan, note=pid, velocity=val)
     else:
         msg = mido.Message("control_change", channel=chan, control=pid, value=val)
     outport.send(msg)
+
+
+def _handle_pressed_feedback(outport, section, pid, rule, is_pressed):
+    pressed_color = rule.get("color_pressed")
+    if pressed_color is None:
+        return
+
+    key = _color_key(section, pid)
+
+    if is_pressed:
+        _PRESSED_ACTIVE.add(key)
+        _send_color(
+            outport,
+            section,
+            pid,
+            pressed_color,
+            rule.get("colormode", "static"),
+            remember=False,
+        )
+        return
+
+    if key in _PRESSED_ACTIVE:
+        color, mode = _COLOR_STATE.get(
+            key,
+            (0, rule.get("colormode", "static")),
+        )
+        _send_color(outport, section, pid, color, mode, remember=False)
+        _PRESSED_ACTIVE.discard(key)
 
 
 def _apply_group_colors(outport, section, pid, group_id, mode="static"):
@@ -261,9 +300,8 @@ def start_daw_listener(state_manager):
 
                 init_default_display(outport, verbose=state_manager.verbose)
                 CUSTOM_TOGGLE_STATES.clear()
-
-                mode_to_channel = {"stationary": 0, "flashing": 1, "pulsing": 2}
-                mode_alias = {"static": "stationary"}
+                _COLOR_STATE.clear()
+                _PRESSED_ACTIVE.clear()
 
                 if state_manager.verbose:
                     print("[DAW] Invio i colori dei pulsanti se sono definiti")
@@ -277,27 +315,13 @@ def start_daw_listener(state_manager):
                                 if color is None:
                                     color = meta.get("color_on")
                             if color is not None:
-                                raw_mode = meta.get("colormode", "stationary")
-                                colormode = mode_alias.get(raw_mode, raw_mode)
-
-                                note = int(pid) & 0x7F
-                                vel = max(0, min(int(color), 127))
-                                chan = mode_to_channel.get(colormode, 0)
-
+                                colormode = meta.get("colormode", "static")
+                                color_val = max(0, min(int(color), 127))
                                 if state_manager.verbose:
                                     print(
-                                        f"[DAW] Colore {vel} {colormode} su pid {note} -> ch {chan}"
+                                        f"[DAW] Colore {color_val} {colormode} su pid {int(pid) & 0x7F}"
                                     )
-
-                                if section == "NOTE":
-                                    color_msg = mido.Message(
-                                        "note_on", channel=chan, note=note, velocity=vel
-                                    )
-                                else:
-                                    color_msg = mido.Message(
-                                        "control_change", channel=chan, control=note, value=vel
-                                    )
-                                outport.send(color_msg)
+                                _send_color(outport, section, pid, color_val, colormode)
 
                             lcd_idx = meta.get("lcd_index")
                             lcd_name = meta.get("name")
@@ -420,6 +444,9 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                             )
                         if not state_manager.disable_realtime_display:
                             show_temp_display(daw_outport, "CUSTOM", name, verbose)
+                    _handle_pressed_feedback(
+                        daw_outport, "NOTE", msg.note, rule, is_on
+                    )
                     return
                 elif "levels" in custom:
                     velocity = msg.velocity if msg.type == "note_on" else 0
@@ -459,6 +486,9 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                             )
                         if not state_manager.disable_realtime_display:
                             show_temp_display(daw_outport, "CUSTOM", disp_name, verbose)
+                        _handle_pressed_feedback(
+                            daw_outport, "NOTE", msg.note, rule, is_on
+                        )
                         return
             if rtype == "FOOTSWITCH" and name in FOOTSWITCH_LOOKUP:
                 val = FOOTSWITCH_LOOKUP[name]
@@ -491,6 +521,7 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                         group_id,
                         rule.get("colormode", "static"),
                     )
+            _handle_pressed_feedback(daw_outport, "NOTE", msg.note, rule, is_on)
         elif verbose:
             print(
                 f"[LAUNCHKEY-DAW-FILTER] Nessuna regola per nota {msg.note} canale {msg.channel}"
@@ -499,10 +530,11 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
     elif msg.type == "control_change":
         rule = LAUNCHKEY_FILTERS["CC"].get(msg.channel, {}).get(msg.control)
         if rule:
+            is_on = msg.value > 0
             rtype = rule.get("type")
             name = rule.get("name")
             if rtype == "CUSTOM" and name in CUSTOM_SYSEX_LOOKUP:
-                if msg.value > 0:
+                if is_on:
                     custom = CUSTOM_SYSEX_LOOKUP[name]
                     state = CUSTOM_TOGGLE_STATES.get(name, False)
                     action = "on" if not state else "off"
@@ -524,9 +556,12 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                         )
                     if not state_manager.disable_realtime_display:
                         show_temp_display(daw_outport, "CUSTOM", name, verbose)
+                _handle_pressed_feedback(
+                    daw_outport, "CC", msg.control, rule, is_on
+                )
                 return
             if rtype in ("FOOTSWITCH", "TABS"):
-                status = 0x7F if msg.value > 0 else 0x00
+                status = 0x7F if is_on else 0x00
                 if rtype == "FOOTSWITCH" and name in FOOTSWITCH_LOOKUP:
                     val = FOOTSWITCH_LOOKUP[name]
                     data = (
@@ -551,7 +586,7 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                         )
                     if msg.value > 0 and not state_manager.disable_realtime_display:
                         show_temp_display(daw_outport, "TABS", name, verbose)
-                if msg.value > 0:
+                if is_on:
                     group_id = rule.get("group")
                     if group_id is not None:
                         _apply_group_colors(
@@ -569,6 +604,7 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                     print(
                         f"[LAUNCHKEY-DAW-FILTER] CC duplicato {msg.control}->{rule['newval']}"
                     )
+            _handle_pressed_feedback(daw_outport, "CC", msg.control, rule, is_on)
         elif verbose:
             print(
                 f"[LAUNCHKEY-DAW-FILTER] Nessuna regola per CC {msg.control} canale {msg.channel}"
