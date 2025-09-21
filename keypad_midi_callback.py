@@ -27,6 +27,32 @@ with open(json_path) as f:
 DEFAULT_NRPN_CHANNEL = 15  # zero-based, corresponds to MIDI channel 16
 
 
+def _resolve_nrpn_channel(mapping):
+    """Return the MIDI channel for an NRPN mapping.
+
+    Channel values can be expressed as zero-based (0-15) or in the more
+    common one-based (1-16) form used by most MIDI interfaces.  The optional
+    ``channel``/``ch`` keys allow overriding the default channel defined by
+    :data:`DEFAULT_NRPN_CHANNEL`.
+    """
+
+    raw_channel = mapping.get("channel")
+    if raw_channel is None:
+        raw_channel = mapping.get("ch")
+
+    if raw_channel is None:
+        return DEFAULT_NRPN_CHANNEL
+
+    if isinstance(raw_channel, int):
+        # Accept both 0-15 (zero-based) and 1-16 (user-friendly) ranges.
+        if 0 <= raw_channel <= 15:
+            return raw_channel
+        if 1 <= raw_channel <= 16:
+            return raw_channel - 1
+
+    return DEFAULT_NRPN_CHANNEL
+
+
 def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
     mapping = KEYPAD_CONFIG.get(keycode)
     if not mapping:
@@ -90,7 +116,7 @@ def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
             return
 
         msb, lsb, data_value = resolved
-        nrpn_channel = mapping.get("channel", DEFAULT_NRPN_CHANNEL)
+        nrpn_channel = _resolve_nrpn_channel(mapping)
         nrpn_sequence = [
             (0x63, msb),  # NRPN MSB
             (0x62, lsb),  # NRPN LSB
