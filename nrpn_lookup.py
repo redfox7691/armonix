@@ -46,9 +46,9 @@ NRPN_LOOKUP = {
             "limiter -18dB": 0x07,
         },
     },
-    "MICRO_EQ_PRESET": {
+    "MICRO_PITCH_PRESET": {
         "msb": 0x70,
-        "lsb": 0x6B,
+        "lsb": 0x3A,
         "values": {
             "OFF": 0x00,
             "Male": 0x01,
@@ -62,9 +62,9 @@ NRPN_LOOKUP = {
             "Doubling Choir": 0x09,
         },
     },
-    "MICRO_ECHO_PRESET": {
+    "MICRO_EQ_PRESET": {
         "msb": 0x70,
-        "lsb": 0x30,
+        "lsb": 0x6B,
         "values": {
             "Standard": 0x00,
             "Flat": 0x01,
@@ -74,6 +74,21 @@ NRPN_LOOKUP = {
             "User 02": 0x05,
             "User 03": 0x06,
             "User 04": 0x07,
+        },
+    },
+    "MICRO_ECHO_PRESET": {
+        "msb": 0x70,
+        "lsb": 0x30,
+         "values": {
+            "OFF": 0x00,
+            "Mono": 0x01,
+            "Stereo": 0x02,
+            "Triplet": 0x03,
+            "Multitap": 0x04,
+            "Reflection": 0x05,
+            "Stage": 0x06,
+            "PingPong": 0x07,
+            "EchoTap": 0x08,
         },
     },
 }
