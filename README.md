@@ -68,9 +68,27 @@ forwarded to the Ketron while others are discarded.
 
 ## Keypad configuration
 
-`keypad_config.json` defines the mapping between keypad keys and Sysex or
-Footswitch messages sent to the Ketron.  Modify this file to adapt the
-commands to your needs.
+`keypad_config.json` defines the mapping between keypad keys and Sysex,
+Footswitch or NRPN messages sent to the Ketron.  Modify this file to
+adapt the commands to your needs.
+
+### NRPN commands
+
+NRPN presets for the Ketron microphone section are listed in
+`nrpn_lookup.py`.  Each entry exposes the NRPN MSB/LSB address and the
+available values.  To trigger one of these presets from the keypad add a
+mapping with `"type": "NRPN"` and specify the target preset with the
+`value` field:
+
+```json
+"KEY_U": { "type": "NRPN", "name": "MICRO_PRESET", "value": "Standard" }
+```
+
+When the configured key is pressed the keypad sends the appropriate
+Control Change sequence (`CC 99`, `CC 98`, `CC 06`) on MIDI channel 16.
+The `value` field accepts both the human readable name and a raw integer
+between 0 and 127, allowing custom presets to be added without modifying
+the lookup table.
 
 ## Custom pads with velocity levels
 

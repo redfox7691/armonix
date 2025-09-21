@@ -16,5 +16,9 @@
   "KEY_Q": { "type": "FOOTSWITCH", "name": "DIAL_UP" },
   "KEY_R": { "type": "FOOTSWITCH", "name": "TEMPO DOWN" },
   "KEY_S": { "type": "FOOTSWITCH", "name": "START/STOP" },
-  "KEY_T": { "type": "FOOTSWITCH", "name": "TEMPO UP" }
+  "KEY_T": { "type": "FOOTSWITCH", "name": "TEMPO UP" },
+  "KEY_U": { "type": "NRPN", "name": "MICRO_PRESET", "value": "Standard" },
+  "KEY_V": { "type": "NRPN", "name": "MICRO_COMPRESSOR_PRESET", "value": "OFF" },
+  "KEY_W": { "type": "NRPN", "name": "MICRO_EQ_PRESET", "value": "OFF" },
+  "KEY_X": { "type": "NRPN", "name": "MICRO_ECHO_PRESET", "value": "Standard" }
 }

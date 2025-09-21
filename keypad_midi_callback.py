@@ -1,8 +1,12 @@
 import json
 import os
+
+import mido
+
 from tabs_lookup import TABS_LOOKUP
 from footswitch_lookup import FOOTSWITCH_LOOKUP
 from custom_sysex_lookup import CUSTOM_SYSEX_LOOKUP
+from nrpn_lookup import resolve_nrpn_value
 from sysex_utils import (
     send_sysex_to_ketron,
     sysex_tabs,
@@ -20,6 +24,9 @@ json_path = os.path.join(base_dir, "keypad_config.json")
 with open(json_path) as f:
     KEYPAD_CONFIG = json.load(f)
 
+DEFAULT_NRPN_CHANNEL = 15  # zero-based, corresponds to MIDI channel 16
+
+
 def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
     mapping = KEYPAD_CONFIG.get(keycode)
     if not mapping:
@@ -29,7 +36,9 @@ def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
 
     cmd_type = mapping["type"]
     name = mapping["name"]
-    data_bytes = None
+    sysex_bytes = None
+    nrpn_sequence = None
+    nrpn_channel = DEFAULT_NRPN_CHANNEL
 
     # Risolvi il comando e la stringa Sysex
     if cmd_type == "FOOTSWITCH":
@@ -40,9 +49,9 @@ def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
             return
         status = 0x7F if is_down else 0x00
         if value > 0x7F:
-            data_bytes = sysex_footswitch_ext(value, status)
+            sysex_bytes = sysex_footswitch_ext(value, status)
         else:
-            data_bytes = sysex_footswitch_std(value, status)
+            sysex_bytes = sysex_footswitch_std(value, status)
 
     elif cmd_type == "TABS":
         value = TABS_LOOKUP.get(name)
@@ -51,7 +60,7 @@ def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
                 print(f"[VERBOSE] TABS '{name}' non trovato")
             return
         status = 0x7F if is_down else 0x00
-        data_bytes = sysex_tabs(value, status)
+        sysex_bytes = sysex_tabs(value, status)
 
     elif cmd_type == "CUSTOM":
         custom = CUSTOM_SYSEX_LOOKUP.get(name)
@@ -60,7 +69,33 @@ def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
                 print(f"[VERBOSE] Custom Sysex '{name}' non trovato")
             return
         param = custom["switch_map"]["toggle"] if is_down else custom["switch_map"]["off"]
-        data_bytes = sysex_custom(custom["format"], param)
+        sysex_bytes = sysex_custom(custom["format"], param)
+
+    elif cmd_type == "NRPN":
+        if not is_down:
+            if verbose:
+                print(f"[VERBOSE] Rilascio NRPN '{name}' ignorato")
+            return
+
+        value_key = mapping.get("value")
+        if value_key is None:
+            if verbose:
+                print(f"[VERBOSE] NRPN '{name}' senza valore associato")
+            return
+
+        resolved = resolve_nrpn_value(name, value_key)
+        if not resolved:
+            if verbose:
+                print(f"[VERBOSE] NRPN '{name}' valore '{value_key}' non trovato")
+            return
+
+        msb, lsb, data_value = resolved
+        nrpn_channel = mapping.get("channel", DEFAULT_NRPN_CHANNEL)
+        nrpn_sequence = [
+            (0x63, msb),  # NRPN MSB
+            (0x62, lsb),  # NRPN LSB
+            (0x06, data_value),  # Data Entry MSB
+        ]
 
     else:
         if verbose:
@@ -69,8 +104,25 @@ def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
 
     # Stampa verbose
     if verbose:
-        print(f"[VERBOSE] Tasto {keycode}: tipo={cmd_type}, comando='{name}', sysex={data_bytes}")
+        if sysex_bytes is not None:
+            print(
+                f"[VERBOSE] Tasto {keycode}: tipo={cmd_type}, comando='{name}', sysex={sysex_bytes}"
+            )
+        elif nrpn_sequence is not None:
+            print(
+                f"[VERBOSE] Tasto {keycode}: tipo={cmd_type}, comando='{name}', "
+                f"nrpn_channel={nrpn_channel}, sequence={nrpn_sequence}"
+            )
 
     # Invia il sysex (solo se tutto è corretto)
-    if data_bytes:
-        send_sysex_to_ketron(ketron_outport, data_bytes)
+    if sysex_bytes:
+        send_sysex_to_ketron(ketron_outport, sysex_bytes)
+    elif nrpn_sequence:
+        for control, value in nrpn_sequence:
+            msg = mido.Message(
+                "control_change",
+                channel=nrpn_channel,
+                control=control,
+                value=value,
+            )
+            ketron_outport.send(msg)
