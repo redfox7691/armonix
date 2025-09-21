@@ -30,10 +30,9 @@ DEFAULT_NRPN_CHANNEL = 15  # zero-based, corresponds to MIDI channel 16
 def _resolve_nrpn_channel(mapping):
     """Return the MIDI channel for an NRPN mapping.
 
-    Channel values can be expressed as zero-based (0-15) or in the more
-    common one-based (1-16) form used by most MIDI interfaces.  The optional
-    ``channel``/``ch`` keys allow overriding the default channel defined by
-    :data:`DEFAULT_NRPN_CHANNEL`.
+    Channel values must be expressed in common one-based (1-16) form used
+    by most MIDI interfaces.  The optional ``channel``/``ch`` keys allow
+    overriding the default channel defined by :data:`DEFAULT_NRPN_CHANNEL`.
     """
 
     raw_channel = mapping.get("channel")
@@ -44,9 +43,6 @@ def _resolve_nrpn_channel(mapping):
         return DEFAULT_NRPN_CHANNEL
 
     if isinstance(raw_channel, int):
-        # Accept both 0-15 (zero-based) and 1-16 (user-friendly) ranges.
-        if 0 <= raw_channel <= 15:
-            return raw_channel
         if 1 <= raw_channel <= 16:
             return raw_channel - 1
 
