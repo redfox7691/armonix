@@ -85,10 +85,12 @@ mapping with `"type": "NRPN"` and specify the target preset with the
 ```
 
 When the configured key is pressed the keypad sends the appropriate
-Control Change sequence (`CC 99`, `CC 98`, `CC 06`) on MIDI channel 16.
-The `value` field accepts both the human readable name and a raw integer
-between 0 and 127, allowing custom presets to be added without modifying
-the lookup table.
+Control Change sequence (`CC 99`, `CC 98`, `CC 06`) on MIDI channel 16 by
+default.  If your Ketron expects the microphone NRPNs on a different
+channel you can override it per key by adding either a `"channel"` or a
+`"ch"` field (e.g. `"ch": 2` for MIDI channel 2).  The `value` field
+accepts both the human readable name and a raw integer between 0 and 127,
+allowing custom presets to be added without modifying the lookup table.
 
 ## Custom pads with velocity levels
 
