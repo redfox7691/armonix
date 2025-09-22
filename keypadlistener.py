@@ -1,5 +1,8 @@
+import logging
 import threading
 from evdev import InputDevice, categorize, ecodes
+
+logger = logging.getLogger(__name__)
 
 class KeypadListener(threading.Thread):
     def __init__(self, device_path, midi_callback, stop_event, verbose=False):
@@ -13,11 +16,11 @@ class KeypadListener(threading.Thread):
         try:
             dev = InputDevice(self.device_path)
             if self.verbose:
-                print(f"[KeypadListener] In ascolto su {self.device_path}")
+                logger.debug("[KeypadListener] In ascolto su %s", self.device_path)
             for event in dev.read_loop():
                 if self.stop_event.is_set():
                     if self.verbose:
-                        print("[KeypadListener] Ricevuto segnale di stop.")
+                        logger.debug("[KeypadListener] Ricevuto segnale di stop.")
                     break
                 if event.type == ecodes.EV_KEY:
                     key_event = categorize(event)
@@ -29,4 +32,5 @@ class KeypadListener(threading.Thread):
                         self.midi_callback(key_event.scancode, str(key_event.keycode), is_down=False)
         except Exception as e:
             if self.verbose:
-                print(f"[KeypadListener] Errore: {e}")
+                logger.debug("[KeypadListener] Errore: %s", e)
+            logger.exception("[KeypadListener] Errore durante la lettura del device")

@@ -1,5 +1,5 @@
 import json
-import os
+import logging
 
 import mido
 
@@ -14,15 +14,20 @@ from sysex_utils import (
     sysex_footswitch_ext,
     sysex_custom,
 )
+from paths import get_config_path
 
-# Path assoluto della cartella dove si trova QUESTO script
-base_dir = os.path.dirname(os.path.abspath(__file__))
+logger = logging.getLogger(__name__)
 
-# Path completo del file json nella stessa cartella
-json_path = os.path.join(base_dir, "keypad_config.json")
+json_path = get_config_path("keypad_config.json")
 
-with open(json_path) as f:
-    KEYPAD_CONFIG = json.load(f)
+try:
+    with open(json_path) as f:
+        KEYPAD_CONFIG = json.load(f)
+except Exception:
+    logger.exception(
+        "Impossibile caricare la configurazione del keypad '%s'", json_path
+    )
+    KEYPAD_CONFIG = {}
 
 DEFAULT_NRPN_CHANNEL = 15  # zero-based, corresponds to MIDI channel 16
 
@@ -53,7 +58,7 @@ def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
     mapping = KEYPAD_CONFIG.get(keycode)
     if not mapping:
         if verbose:
-            print(f"[VERBOSE] Tasto {keycode} non mappato")
+            logger.debug("Tasto %s non mappato", keycode)
         return
 
     cmd_type = mapping["type"]
@@ -67,7 +72,7 @@ def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
         value = FOOTSWITCH_LOOKUP.get(name)
         if value is None:
             if verbose:
-                print(f"[VERBOSE] FOOTSWITCH '{name}' non trovato")
+                logger.debug("FOOTSWITCH '%s' non trovato", name)
             return
         status = 0x7F if is_down else 0x00
         if value > 0x7F:
@@ -79,7 +84,7 @@ def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
         value = TABS_LOOKUP.get(name)
         if value is None:
             if verbose:
-                print(f"[VERBOSE] TABS '{name}' non trovato")
+                logger.debug("TABS '%s' non trovato", name)
             return
         status = 0x7F if is_down else 0x00
         sysex_bytes = sysex_tabs(value, status)
@@ -88,7 +93,7 @@ def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
         custom = CUSTOM_SYSEX_LOOKUP.get(name)
         if not custom:
             if verbose:
-                print(f"[VERBOSE] Custom Sysex '{name}' non trovato")
+                logger.debug("Custom Sysex '%s' non trovato", name)
             return
         param = custom["switch_map"]["toggle"] if is_down else custom["switch_map"]["off"]
         sysex_bytes = sysex_custom(custom["format"], param)
@@ -96,19 +101,19 @@ def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
     elif cmd_type == "NRPN":
         if not is_down:
             if verbose:
-                print(f"[VERBOSE] Rilascio NRPN '{name}' ignorato")
+                logger.debug("Rilascio NRPN '%s' ignorato", name)
             return
 
         value_key = mapping.get("value")
         if value_key is None:
             if verbose:
-                print(f"[VERBOSE] NRPN '{name}' senza valore associato")
+                logger.debug("NRPN '%s' senza valore associato", name)
             return
 
         resolved = resolve_nrpn_value(name, value_key)
         if not resolved:
             if verbose:
-                print(f"[VERBOSE] NRPN '{name}' valore '{value_key}' non trovato")
+                logger.debug("NRPN '%s' valore '%s' non trovato", name, value_key)
             return
 
         msb, lsb, data_value = resolved
@@ -121,19 +126,27 @@ def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
 
     else:
         if verbose:
-            print(f"[VERBOSE] Tipo comando '{cmd_type}' non gestito")
+            logger.debug("Tipo comando '%s' non gestito", cmd_type)
         return
 
     # Stampa verbose
     if verbose:
         if sysex_bytes is not None:
-            print(
-                f"[VERBOSE] Tasto {keycode}: tipo={cmd_type}, comando='{name}', sysex={sysex_bytes}"
+            logger.debug(
+                "Tasto %s: tipo=%s, comando='%s', sysex=%s",
+                keycode,
+                cmd_type,
+                name,
+                sysex_bytes,
             )
         elif nrpn_sequence is not None:
-            print(
-                f"[VERBOSE] Tasto {keycode}: tipo={cmd_type}, comando='{name}', "
-                f"nrpn_channel={nrpn_channel}, sequence={nrpn_sequence}"
+            logger.debug(
+                "Tasto %s: tipo=%s, comando='%s', nrpn_channel=%s, sequence=%s",
+                keycode,
+                cmd_type,
+                name,
+                nrpn_channel,
+                nrpn_sequence,
             )
 
     # Invia il sysex (solo se tutto è corretto)

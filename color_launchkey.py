@@ -11,6 +11,7 @@ from PyQt5 import QtCore, QtWidgets
 from footswitch_lookup import FOOTSWITCH_LOOKUP
 from tabs_lookup import TABS_LOOKUP
 from custom_sysex_lookup import CUSTOM_SYSEX_LOOKUP
+from paths import get_config_path
 
 
 DEBUG = False
@@ -22,7 +23,7 @@ def debug_print(*args, **kwargs):
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(BASE_DIR, "launchkey_config.json")
+CONFIG_PATH = get_config_path("launchkey_config.json")
 
 # CC numbers corresponding to faders/pots that should be ignored when
 # assigning controls.
