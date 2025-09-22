@@ -22,6 +22,7 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         ketron_port_keyword="MIDI Gadget",
         ble_port_keyword="Bluetooth",
         keypad_device="/dev/input/by-id/usb-1189_USB_Composite_Device_CD70134330363235-if01-event-kbd",
+        enable_midi_io=True,
         logger=None,
     ):
         super().__init__()
@@ -37,6 +38,7 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         )
         self.ketron_port_keyword = ketron_port_keyword or "MIDI Gadget"
         self.ble_port_keyword = ble_port_keyword or "Bluetooth"
+        self.midi_io_enabled = enable_midi_io
         self.ledbar = None
         self.master_port = None
         self.ketron_port = None
@@ -115,7 +117,8 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
             self.ble_connected = True
             if self.verbose:
                 self.logger.debug("Dispositivo Bluetooth MIDI trovato: %s", ble_port)
-            self.start_ble_listener()
+            if self.midi_io_enabled:
+                self.start_ble_listener()
         elif not ble_port and self.ble_connected:
             if self.verbose:
                 self.logger.debug("Bluetooth MIDI scollegato")
@@ -244,6 +247,8 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
 
     # -------- Bluetooth MIDI methods --------
     def start_ble_listener(self):
+        if not self.midi_io_enabled:
+            return
         if self.ble_listener_thread and self.ble_listener_thread.is_alive():
             return  # già attivo
         self.ble_listener_stop = threading.Event()
@@ -275,6 +280,8 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
     # -------- DAW MIDI methods --------
     # -------- Master MIDI methods --------
     def start_master_listener(self):
+        if not self.midi_io_enabled:
+            return
         if hasattr(self, "master_listener_thread") and self.master_listener_thread and self.master_listener_thread.is_alive():
             return  # già attivo
         self.master_listener_stop = threading.Event()
