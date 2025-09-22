@@ -63,6 +63,97 @@ def _configure_logging(verbose: bool) -> logging.Logger:
     return logger
 
 
+def _setup_child_logger(name: str, parent: logging.Logger) -> logging.Logger:
+    """Create a child logger mirroring the parent's configuration."""
+
+    child = logging.getLogger(name)
+    child.propagate = False
+    for handler in list(child.handlers):
+        child.removeHandler(handler)
+    for handler in parent.handlers:
+        child.addHandler(handler)
+    child.setLevel(parent.level)
+    return child
+
+
+def _create_state_manager(
+    *,
+    verbose: bool,
+    master: str,
+    disable_realtime_display: bool,
+    master_port_keyword: Optional[str],
+    ketron_port_keyword: Optional[str],
+    ble_port_keyword: Optional[str],
+    keypad_device: Optional[str],
+    parent_logger: Optional[logging.Logger] = None,
+) -> StateManager:
+    state_logger = (
+        _setup_child_logger("armonix.statemanager", parent_logger)
+        if parent_logger
+        else logging.getLogger("armonix.statemanager")
+    )
+    return StateManager(
+        verbose=verbose,
+        master=master,
+        disable_realtime_display=disable_realtime_display,
+        master_port_keyword=master_port_keyword,
+        ketron_port_keyword=ketron_port_keyword,
+        ble_port_keyword=ble_port_keyword,
+        keypad_device=keypad_device,
+        logger=state_logger,
+    )
+
+
+def _ensure_session_credentials(logger: logging.Logger, session) -> bool:
+    """Adopt the UID/GID of the graphical session when running as root."""
+
+    try:
+        current_uid = os.getuid()
+        current_gid = os.getgid()
+    except OSError:
+        current_uid = current_gid = -1
+
+    if current_uid == session.uid and current_gid == session.gid:
+        return True
+
+    if current_uid != 0:
+        logger.warning(
+            "Impossibile adottare l'utente '%s' (uid=%s): processo avviato con uid=%s.",
+            session.username,
+            session.uid,
+            current_uid,
+        )
+        return False
+
+    try:
+        os.initgroups(session.username, session.gid)
+    except Exception as exc:  # pragma: no cover - defensive logging
+        logger.warning(
+            "Impossibile impostare i gruppi supplementari per '%s': %s",
+            session.username,
+            exc,
+        )
+
+    try:
+        os.setgid(session.gid)
+        os.setuid(session.uid)
+    except OSError as exc:
+        logger.error(
+            "Impossibile impostare i permessi dell'utente '%s' (uid=%s): %s",
+            session.username,
+            session.uid,
+            exc,
+        )
+        return False
+
+    logger.info(
+        "Esecuzione continuata come utente '%s' (uid=%s).",
+        session.username,
+        session.uid,
+    )
+    return True
+
+
 def main() -> None:
     base_parser = argparse.ArgumentParser(add_help=False)
     base_parser.add_argument(
@@ -139,25 +230,28 @@ def main() -> None:
         "headless" if args.headless else "gui",
     )
 
-    wifi_launcher = None
-    if config.wifi.enabled:
-        wifi_logger = logging.getLogger("armonix.wifi")
-        wifi_launcher = WifiVncLauncher(config.wifi, logger=wifi_logger)
-        wifi_launcher.start()
+    wifi_logger = _setup_child_logger("armonix.wifi", logger)
 
-    state_manager = StateManager(
-        verbose=args.verbose,
-        master=args.master,
-        disable_realtime_display=args.disable_realtime_display,
-        master_port_keyword=config.midi.master_port_keyword,
-        ketron_port_keyword=config.midi.ketron_port_keyword,
-        ble_port_keyword=config.midi.bluetooth_port_keyword,
-        keypad_device=config.keypad_device,
-        logger=logging.getLogger("armonix.statemanager"),
-    )
+    wifi_launcher = None
+    state_manager = None
 
     try:
         if args.headless:
+            if config.wifi.enabled:
+                wifi_launcher = WifiVncLauncher(config.wifi, logger=wifi_logger)
+                wifi_launcher.start()
+
+            state_manager = _create_state_manager(
+                verbose=args.verbose,
+                master=args.master,
+                disable_realtime_display=args.disable_realtime_display,
+                master_port_keyword=config.midi.master_port_keyword,
+                ketron_port_keyword=config.midi.ketron_port_keyword,
+                ble_port_keyword=config.midi.bluetooth_port_keyword,
+                keypad_device=config.keypad_device,
+                parent_logger=logger,
+            )
+
             logger.info("Modalità headless attiva")
             while True:
                 time.sleep(1)
@@ -166,7 +260,14 @@ def main() -> None:
             _run_gui_mode(
                 config=config,
                 logger=logger,
-                state_manager=state_manager,
+                wifi_logger=wifi_logger,
+                verbose=args.verbose,
+                master=args.master,
+                disable_realtime_display=args.disable_realtime_display,
+                master_port_keyword=config.midi.master_port_keyword,
+                ketron_port_keyword=config.midi.ketron_port_keyword,
+                ble_port_keyword=config.midi.bluetooth_port_keyword,
+                keypad_device=config.keypad_device,
             )
     except KeyboardInterrupt:
         logger.info("Terminazione richiesta dall'utente")
@@ -178,7 +279,19 @@ def main() -> None:
             wifi_launcher.stop()
 
 
-def _run_gui_mode(config, logger, state_manager) -> None:
+def _run_gui_mode(
+    *,
+    config,
+    logger: logging.Logger,
+    wifi_logger: logging.Logger,
+    verbose: bool,
+    master: str,
+    disable_realtime_display: bool,
+    master_port_keyword: Optional[str],
+    ketron_port_keyword: Optional[str],
+    ble_port_keyword: Optional[str],
+    keypad_device: Optional[str],
+) -> None:
     from PyQt5 import QtCore, QtWidgets
     from ledbar import LedBar
 
@@ -186,64 +299,85 @@ def _run_gui_mode(config, logger, state_manager) -> None:
 
     app: Optional[QtWidgets.QApplication] = None
 
-    session_logger = logging.getLogger("armonix.gui")
-    session_logger.propagate = False
-    for handler in list(session_logger.handlers):
-        session_logger.removeHandler(handler)
-    for handler in logger.handlers:
-        session_logger.addHandler(handler)
-    session_logger.setLevel(logger.level)
+    session_logger = _setup_child_logger("armonix.gui", logger)
 
-    while True:
-        session = _wait_for_graphical_session(session_logger, poll_interval)
-        if not session:
-            return
+    wifi_launcher: Optional[WifiVncLauncher] = None
+    state_manager: Optional[StateManager] = None
+    credentials_ready = False
 
-        env = build_session_environment(session)
-        os.environ.update(env)
-
-        if app is None:
-            app = QtWidgets.QApplication(sys.argv)
-
-        led_bar = LedBar(states_getter=state_manager.get_led_states)
-        state_manager.set_ledbar(led_bar)
-        led_bar.set_state_manager(state_manager)
-        session_logger.info(
-            "Avvio della barra LED per l'utente '%s'.",
-            session.username,
-        )
-
-        session_lost = threading.Event()
-
-        def _request_quit() -> None:
-            if session_lost.is_set():
+    try:
+        while True:
+            session = _wait_for_graphical_session(session_logger, poll_interval)
+            if not session:
                 return
-            session_lost.set()
-            QtCore.QTimer.singleShot(0, app.quit)
 
-        monitor = _SessionMonitor(
-            session_id=session.session_id,
-            poll_interval=poll_interval,
-            on_session_lost=_request_quit,
-        )
-        monitor.start()
+            env = build_session_environment(session)
+            os.environ.update(env)
 
-        try:
-            app.exec_()
-        finally:
-            monitor.stop()
-            monitor.join()
+            if not credentials_ready:
+                credentials_ready = _ensure_session_credentials(session_logger, session)
 
-            led_bar.close()
-            state_manager.set_ledbar(None)
+            if state_manager is None:
+                state_manager = _create_state_manager(
+                    verbose=verbose,
+                    master=master,
+                    disable_realtime_display=disable_realtime_display,
+                    master_port_keyword=master_port_keyword,
+                    ketron_port_keyword=ketron_port_keyword,
+                    ble_port_keyword=ble_port_keyword,
+                    keypad_device=keypad_device,
+                    parent_logger=logger,
+                )
 
-        if session_lost.is_set():
+            if wifi_launcher is None and config.wifi.enabled:
+                wifi_launcher = WifiVncLauncher(config.wifi, logger=wifi_logger)
+                wifi_launcher.start()
+
+            if app is None:
+                app = QtWidgets.QApplication(sys.argv)
+
+            led_bar = LedBar(states_getter=state_manager.get_led_states)
+            state_manager.set_ledbar(led_bar)
+            led_bar.set_state_manager(state_manager)
             session_logger.info(
-                "Sessione grafica terminata: in attesa di un nuovo login per riattivare la barra LED."
+                "Avvio della barra LED per l'utente '%s'.",
+                session.username,
             )
-            continue
 
-        break
+            session_lost = threading.Event()
+
+            def _request_quit() -> None:
+                if session_lost.is_set():
+                    return
+                session_lost.set()
+                QtCore.QTimer.singleShot(0, app.quit)
+
+            monitor = _SessionMonitor(
+                session_id=session.session_id,
+                poll_interval=poll_interval,
+                on_session_lost=_request_quit,
+            )
+            monitor.start()
+
+            try:
+                app.exec_()
+            finally:
+                monitor.stop()
+                monitor.join()
+
+                led_bar.close()
+                state_manager.set_ledbar(None)
+
+            if session_lost.is_set():
+                session_logger.info(
+                    "Sessione grafica terminata: in attesa di un nuovo login per riattivare la barra LED."
+                )
+                continue
+
+            break
+    finally:
+        if wifi_launcher:
+            wifi_launcher.stop()
 
 
 class _SessionMonitor(threading.Thread):
