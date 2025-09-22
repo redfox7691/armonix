@@ -72,7 +72,8 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
 
     def set_ledbar(self, ledbar):
         self.ledbar = ledbar
-        self.ledbar.set_animating(self.state == "waiting")
+        if self.ledbar:
+            self.ledbar.set_animating(self.state == "waiting")
 
     def _polling_loop(self):
         while True:

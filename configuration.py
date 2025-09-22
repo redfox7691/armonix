@@ -35,9 +35,6 @@ class WifiConfig:
     ssid: str = ""
     vnc_command: str = ""
     poll_interval: int = 5
-    display: str = ""
-    xdg_runtime_dir: str = ""
-    dbus_session_address: str = ""
 
     @property
     def enabled(self) -> bool:
@@ -96,10 +93,6 @@ def load_config(path: Optional[str] = None) -> ArmonixConfig:
     wifi_ssid = parser.get("wifi", "ssid", fallback="").strip()
     wifi_cmd = parser.get("wifi", "vnc_command", fallback="").strip()
     wifi_interval = _as_int(parser.get("wifi", "poll_interval", fallback="5"), 5)
-    wifi_display = parser.get("wifi", "display", fallback="").strip()
-    wifi_runtime = parser.get("wifi", "xdg_runtime_dir", fallback="").strip()
-    wifi_dbus = parser.get("wifi", "dbus_session_address", fallback="").strip()
-
     midi_cfg = MidiConfig(
         master_port_keyword=master_keyword,
         ketron_port_keyword=ketron_keyword,
@@ -110,9 +103,6 @@ def load_config(path: Optional[str] = None) -> ArmonixConfig:
         ssid=wifi_ssid,
         vnc_command=wifi_cmd,
         poll_interval=wifi_interval,
-        display=wifi_display,
-        xdg_runtime_dir=wifi_runtime,
-        dbus_session_address=wifi_dbus,
     )
 
     return ArmonixConfig(
