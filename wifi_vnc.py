@@ -36,12 +36,26 @@ class WifiVncLauncher(threading.Thread):
 
     def _launch_vnc_for_session(self, session: GraphicalSession) -> None:
         def demote() -> None:
+            if os.getuid() != 0:
+                return
             try:
                 os.initgroups(session.username, session.gid)
-            except Exception:
-                pass
-            os.setgid(session.gid)
-            os.setuid(session.uid)
+            except Exception as exc:
+                self.logger.warning(
+                    "Impossibile impostare i gruppi supplementari per '%s': %s",
+                    session.username,
+                    exc,
+                )
+            try:
+                os.setgid(session.gid)
+                os.setuid(session.uid)
+            except OSError as exc:
+                self.logger.warning(
+                    "Impossibile cambiare utente in '%s' (uid=%s) per il client VNC: %s",
+                    session.username,
+                    session.uid,
+                    exc,
+                )
 
         env = self._build_env(session)
 
@@ -106,3 +120,5 @@ class WifiVncLauncher(threading.Thread):
 
     def stop(self) -> None:
         self.stop_event.set()
+        if self.is_alive():
+            self.join(timeout=5)
