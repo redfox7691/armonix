@@ -135,17 +135,6 @@ def main() -> None:
         "headless" if args.headless else "gui",
     )
 
-    state_manager = StateManager(
-        verbose=args.verbose,
-        master=args.master,
-        disable_realtime_display=args.disable_realtime_display,
-        master_port_keyword=config.midi.master_port_keyword,
-        ketron_port_keyword=config.midi.ketron_port_keyword,
-        ble_port_keyword=config.midi.bluetooth_port_keyword,
-        keypad_device=config.keypad_device,
-        logger=logging.getLogger("armonix.statemanager"),
-    )
-
     wifi_launcher = None
     if config.wifi.enabled:
         wifi_logger = logging.getLogger("armonix.wifi")
@@ -155,6 +144,16 @@ def main() -> None:
     try:
         if args.headless:
             logger.info("Modalità headless attiva")
+            state_manager = StateManager(
+                verbose=args.verbose,
+                master=args.master,
+                disable_realtime_display=args.disable_realtime_display,
+                master_port_keyword=config.midi.master_port_keyword,
+                ketron_port_keyword=config.midi.ketron_port_keyword,
+                ble_port_keyword=config.midi.bluetooth_port_keyword,
+                keypad_device=config.keypad_device,
+                logger=logging.getLogger("armonix.statemanager"),
+            )
             while True:
                 time.sleep(1)
         else:
@@ -163,6 +162,16 @@ def main() -> None:
             from ledbar import LedBar
 
             app = QtWidgets.QApplication(sys.argv)
+            state_manager = StateManager(
+                verbose=args.verbose,
+                master=args.master,
+                disable_realtime_display=args.disable_realtime_display,
+                master_port_keyword=config.midi.master_port_keyword,
+                ketron_port_keyword=config.midi.ketron_port_keyword,
+                ble_port_keyword=config.midi.bluetooth_port_keyword,
+                keypad_device=config.keypad_device,
+                logger=logging.getLogger("armonix.statemanager"),
+            )
             led_bar = LedBar(states_getter=state_manager.get_led_states)
             state_manager.set_ledbar(led_bar)
             led_bar.set_state_manager(state_manager)
