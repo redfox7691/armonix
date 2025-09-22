@@ -12,6 +12,7 @@ deb: clean_deb
 	mkdir -p $(PKG_DIR)/etc/$(PKG_NAME)
 	mkdir -p $(PKG_DIR)/usr/share/$(PKG_NAME)/examples
 	mkdir -p $(PKG_DIR)/usr/lib/systemd/system
+	mkdir -p $(PKG_DIR)/usr/lib/systemd/user
 	mkdir -p $(PKG_DIR)/usr/share/man/man1
 	mkdir -p $(PKG_DIR)/var/lib/$(PKG_NAME)
 
@@ -19,6 +20,8 @@ deb: clean_deb
 	rm -rf $(PKG_DIR)/usr/lib/$(PKG_NAME)/build
 
 	install -m755 scripts/armonix $(PKG_DIR)/usr/bin/armonix
+	install -m755 scripts/armonix-engine $(PKG_DIR)/usr/bin/armonix-engine
+	install -m755 scripts/armonix-gui $(PKG_DIR)/usr/bin/armonix-gui
 	install -m644 armonix.conf $(PKG_DIR)/etc/$(PKG_NAME)/armonix.conf
 	install -m644 keypad_config.json $(PKG_DIR)/etc/$(PKG_NAME)/keypad_config.json
 	install -m644 launchkey_config.json $(PKG_DIR)/etc/$(PKG_NAME)/launchkey_config.json
@@ -27,6 +30,7 @@ deb: clean_deb
 	install -m644 launchkey_config.json $(PKG_DIR)/usr/share/$(PKG_NAME)/examples/launchkey_config.json
 
 	install -m644 packaging/armonix.service $(PKG_DIR)/usr/lib/systemd/system/armonix.service
+	install -m644 packaging/armonix-gui.service $(PKG_DIR)/usr/lib/systemd/user/armonix-gui.service
 	gzip -9 -c man/armonix.1 > $(PKG_DIR)/usr/share/man/man1/armonix.1.gz
 
 	sed "s/@VERSION@/$(VERSION)/" packaging/debian/control.in > $(PKG_DIR)/DEBIAN/control

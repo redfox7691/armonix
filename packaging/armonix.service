@@ -8,7 +8,7 @@ User=armonix
 Group=armonix
 SupplementaryGroups=input
 WorkingDirectory=/usr/lib/armonix
-ExecStart=/usr/bin/armonix
+ExecStart=/usr/bin/armonix-engine
 Restart=on-failure
 RestartSec=3
 Environment=PYTHONUNBUFFERED=1

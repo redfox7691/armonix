@@ -12,4 +12,4 @@ from main import main
 
 if __name__ == "__main__":
     os.environ.setdefault("PYTHONUNBUFFERED", "1")
-    main(sys.argv[1:])
+    main(["--gui", "--enable-vnc", *sys.argv[1:]])

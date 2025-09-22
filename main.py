@@ -154,12 +154,15 @@ def _ensure_session_credentials(logger: logging.Logger, session) -> bool:
     return True
 
 
-def main() -> None:
+def main(argv: Optional[list[str]] = None) -> None:
+    if argv is None:
+        argv = sys.argv[1:]
+
     base_parser = argparse.ArgumentParser(add_help=False)
     base_parser.add_argument(
         "--config", help="Percorso alternativo del file di configurazione", default=None
     )
-    base_args, remaining = base_parser.parse_known_args()
+    base_args, remaining = base_parser.parse_known_args(argv)
 
     config = load_config(base_args.config)
 
@@ -207,6 +210,18 @@ def main() -> None:
         action="store_false",
         help="Forza l'avvio con interfaccia grafica",
     )
+    parser.add_argument(
+        "--enable-vnc",
+        dest="launch_vnc",
+        action="store_true",
+        help="Avvia anche il monitor Wi-Fi per il client VNC",
+    )
+    parser.add_argument(
+        "--disable-vnc",
+        dest="launch_vnc",
+        action="store_false",
+        help="Disabilita il monitor Wi-Fi/VNC",
+    )
 
     parser.set_defaults(
         verbose=config.verbose,
@@ -214,6 +229,7 @@ def main() -> None:
         disable_realtime_display=config.disable_realtime_display,
         headless=config.headless,
         config=config.source_path,
+        launch_vnc=config.wifi.enabled,
     )
 
     args = parser.parse_args(remaining)
@@ -232,16 +248,12 @@ def main() -> None:
 
     wifi_logger = _setup_child_logger("armonix.wifi", logger)
 
-    wifi_launcher = None
-    state_manager = None
-
     try:
         if args.headless:
-            if config.wifi.enabled:
-                wifi_launcher = WifiVncLauncher(config.wifi, logger=wifi_logger)
-                wifi_launcher.start()
-
-            state_manager = _create_state_manager(
+            _run_headless_mode(
+                config=config,
+                logger=logger,
+                wifi_logger=wifi_logger,
                 verbose=args.verbose,
                 master=args.master,
                 disable_realtime_display=args.disable_realtime_display,
@@ -249,12 +261,8 @@ def main() -> None:
                 ketron_port_keyword=config.midi.ketron_port_keyword,
                 ble_port_keyword=config.midi.bluetooth_port_keyword,
                 keypad_device=config.keypad_device,
-                parent_logger=logger,
+                launch_vnc=args.launch_vnc,
             )
-
-            logger.info("Modalità headless attiva")
-            while True:
-                time.sleep(1)
         else:
             logger.info("Modalità grafica attiva")
             _run_gui_mode(
@@ -268,12 +276,50 @@ def main() -> None:
                 ketron_port_keyword=config.midi.ketron_port_keyword,
                 ble_port_keyword=config.midi.bluetooth_port_keyword,
                 keypad_device=config.keypad_device,
+                launch_vnc=args.launch_vnc,
             )
     except KeyboardInterrupt:
         logger.info("Terminazione richiesta dall'utente")
     except Exception:
         logger.exception("Errore non gestito")
         raise
+
+
+def _run_headless_mode(
+    *,
+    config,
+    logger: logging.Logger,
+    wifi_logger: logging.Logger,
+    verbose: bool,
+    master: str,
+    disable_realtime_display: bool,
+    master_port_keyword: Optional[str],
+    ketron_port_keyword: Optional[str],
+    ble_port_keyword: Optional[str],
+    keypad_device: Optional[str],
+    launch_vnc: bool,
+) -> None:
+    wifi_launcher: Optional[WifiVncLauncher] = None
+
+    try:
+        if launch_vnc and config.wifi.enabled:
+            wifi_launcher = WifiVncLauncher(config.wifi, logger=wifi_logger)
+            wifi_launcher.start()
+
+        state_manager = _create_state_manager(
+            verbose=verbose,
+            master=master,
+            disable_realtime_display=disable_realtime_display,
+            master_port_keyword=master_port_keyword,
+            ketron_port_keyword=ketron_port_keyword,
+            ble_port_keyword=ble_port_keyword,
+            keypad_device=keypad_device,
+            parent_logger=logger,
+        )
+
+        logger.info("Modalità headless attiva")
+        while True:
+            time.sleep(1)
     finally:
         if wifi_launcher:
             wifi_launcher.stop()
@@ -291,6 +337,7 @@ def _run_gui_mode(
     ketron_port_keyword: Optional[str],
     ble_port_keyword: Optional[str],
     keypad_device: Optional[str],
+    launch_vnc: bool,
 ) -> None:
     from PyQt5 import QtCore, QtWidgets
     from ledbar import LedBar
@@ -329,7 +376,7 @@ def _run_gui_mode(
                     parent_logger=logger,
                 )
 
-            if wifi_launcher is None and config.wifi.enabled:
+            if wifi_launcher is None and launch_vnc and config.wifi.enabled:
                 wifi_launcher = WifiVncLauncher(config.wifi, logger=wifi_logger)
                 wifi_launcher.start()
 
