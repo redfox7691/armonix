@@ -5,6 +5,14 @@ if command -v systemctl >/dev/null 2>&1; then
     systemctl daemon-reload >/dev/null 2>&1 || true
     if [ "$1" = "remove" ]; then
         systemctl disable armonix.service >/dev/null 2>&1 || true
+        systemctl --global disable armonix-gui.service >/dev/null 2>&1 || true
+        if command -v loginctl >/dev/null 2>&1; then
+            loginctl list-users 2>/dev/null | awk 'NR>1 {print $2}' | while read -r user; do
+                [ -z "$user" ] && continue
+                [ "$user" = "root" ] && continue
+                runuser -l "$user" -c "systemctl --user disable armonix-gui.service >/dev/null 2>&1 || true" || true
+            done || true
+        fi
     fi
 fi
 

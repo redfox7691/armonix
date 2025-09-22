@@ -1,10 +1,7 @@
 import json
 import logging
-import os
 import re
-import subprocess
 import threading
-from datetime import datetime
 
 import mido
 
@@ -19,6 +16,7 @@ from sysex_utils import (
 )
 from custom_sysex_lookup import CUSTOM_SYSEX_LOOKUP
 from paths import get_config_path
+from version import __version__ as ARMONIX_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +27,6 @@ DAW_OUT_PORT_KEYWORD = "Launchkey MK3 88 LKMK3 DAW In"
 
 # --- Config loading -------------------------------------------------------
 
-base_dir = os.path.dirname(os.path.abspath(__file__))
 _config_path = get_config_path("launchkey_config.json")
 
 
@@ -127,28 +124,11 @@ def _send_display(outport, line1, line2, verbose=False):
 
 
 def init_default_display(outport, verbose=False):
-    """Compute default message with git info and show it."""
+    """Show the application version on the Launchkey display."""
+
     global _default_lines
-    git_dir = os.path.join(base_dir, ".git")
-    if os.path.isdir(git_dir):
-        try:
-            version = subprocess.check_output(
-                ["git", "rev-list", "--count", "HEAD"], cwd=base_dir
-            ).decode().strip()
-        except Exception:
-            version = "0"
-        try:
-            date = subprocess.check_output(
-                ["git", "log", "-1", "--format=%cd", "--date=format:%d/%m/%Y"],
-                cwd=base_dir,
-            ).decode().strip()
-        except Exception:
-            date = datetime.now().strftime("%d/%m/%Y")
-    else:
-        version = "0"
-        date = datetime.now().strftime("%d/%m/%Y")
     line1 = "Armonix".center(16)
-    line2 = f"{date} v{version}".center(16)
+    line2 = f"v. {ARMONIX_VERSION}".center(16)
     _default_lines = (line1[:16], line2[:16])
     _send_display(outport, *_default_lines, verbose=verbose)
 

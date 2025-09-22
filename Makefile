@@ -1,5 +1,5 @@
 PKG_NAME := armonix
-VERSION := 0.99.1
+VERSION := $(shell python3 -c "from version import __version__; print(__version__)")
 BUILD_DIR := build/deb
 PKG_DIR := $(BUILD_DIR)/$(PKG_NAME)_$(VERSION)
 
