@@ -86,6 +86,7 @@ def _create_state_manager(
     ketron_port_keyword: Optional[str],
     ble_port_keyword: Optional[str],
     keypad_device: Optional[str],
+    enable_midi_io: bool,
     parent_logger: Optional[logging.Logger] = None,
 ) -> StateManager:
     state_logger = (
@@ -101,6 +102,7 @@ def _create_state_manager(
         ketron_port_keyword=ketron_port_keyword,
         ble_port_keyword=ble_port_keyword,
         keypad_device=keypad_device,
+        enable_midi_io=enable_midi_io,
         logger=state_logger,
     )
 
@@ -316,6 +318,7 @@ def _run_headless_mode(
             ketron_port_keyword=ketron_port_keyword,
             ble_port_keyword=ble_port_keyword,
             keypad_device=keypad_device,
+            enable_midi_io=True,
             parent_logger=logger,
         )
 
@@ -375,6 +378,7 @@ def _run_gui_mode(
                     ketron_port_keyword=ketron_port_keyword,
                     ble_port_keyword=ble_port_keyword,
                     keypad_device=keypad_device,
+                    enable_midi_io=False,
                     parent_logger=logger,
                 )
 
