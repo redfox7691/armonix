@@ -7,9 +7,28 @@ BASE_DIR = "/usr/lib/armonix"
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
+from configuration import load_config
 from main import main
+
+
+def _extract_config_path(argv):
+    """Return the config path passed via ``--config`` (if any)."""
+
+    for index, arg in enumerate(argv):
+        if arg == "--config" and index + 1 < len(argv):
+            return argv[index + 1]
+        if arg.startswith("--config="):
+            return arg.split("=", 1)[1]
+    return None
 
 
 if __name__ == "__main__":
     os.environ.setdefault("PYTHONUNBUFFERED", "1")
+
+    config_path = _extract_config_path(sys.argv[1:])
+    config = load_config(config_path)
+
+    if config.headless:
+        sys.exit(0)
+
     main(["--gui", "--enable-vnc", *sys.argv[1:]])
