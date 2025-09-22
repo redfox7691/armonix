@@ -20,6 +20,7 @@ class GraphicalSession:
     display: str
     xdg_runtime_dir: str
     home: str
+    xauthority: str
 
 
 def _session_properties(session_id: str) -> Dict[str, str]:
@@ -98,6 +99,17 @@ def find_active_graphical_session() -> Optional[GraphicalSession]:
         if not os.path.isdir(runtime_dir):
             runtime_dir = ""
 
+        xauthority = ""
+        candidate_paths = []
+        if runtime_dir:
+            candidate_paths.append(os.path.join(runtime_dir, "gdm/Xauthority"))
+        candidate_paths.append(os.path.join(pw_record.pw_dir, ".Xauthority"))
+
+        for candidate in candidate_paths:
+            if candidate and os.path.isfile(candidate):
+                xauthority = candidate
+                break
+
         return GraphicalSession(
             session_id=session_id,
             username=username,
@@ -106,6 +118,7 @@ def find_active_graphical_session() -> Optional[GraphicalSession]:
             display=display,
             xdg_runtime_dir=runtime_dir,
             home=pw_record.pw_dir,
+            xauthority=xauthority,
         )
 
     return None
@@ -133,5 +146,8 @@ def build_session_environment(
     env["HOME"] = session.home
     env["LOGNAME"] = session.username
     env["USER"] = session.username
+
+    if session.xauthority:
+        env["XAUTHORITY"] = session.xauthority
 
     return env
