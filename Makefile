@@ -1,5 +1,5 @@
 PKG_NAME := armonix
-VERSION := 0.99
+VERSION := 0.99.1
 BUILD_DIR := build/deb
 PKG_DIR := $(BUILD_DIR)/$(PKG_NAME)_$(VERSION)
 

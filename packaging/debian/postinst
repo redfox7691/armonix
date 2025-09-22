@@ -11,7 +11,7 @@ else
     usermod -a -G audio armonix >/dev/null 2>&1 || true
 fi
 
-install -d -o armonix -g armonix /var/lib/armonix
+install -d -o armonix -g armonix -m 0755 /var/lib/armonix
 
 if command -v systemctl >/dev/null 2>&1; then
     systemctl daemon-reload >/dev/null 2>&1 || true
