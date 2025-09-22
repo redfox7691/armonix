@@ -104,7 +104,8 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
             self.keypad_connected = True
             if self.verbose:
                 self.logger.debug("Tastierino USB collegato")
-            self.start_keypad_listener()
+            if self.midi_io_enabled:
+                self.start_keypad_listener()
         elif not keypad_present and self.keypad_connected:
             self.keypad_connected = False
             if self.verbose:
@@ -215,6 +216,8 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
 
     # -------- Tastierino USB methods --------
     def on_keypad_event(self, scancode, keycode, is_down):
+        if not self.midi_io_enabled:
+            return
         if not self.ketron_port:
             if self.verbose:
                 self.logger.debug("Ricevuto evento da tastierino ma Ketron non collegato.")
@@ -225,6 +228,8 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
             keypad_midi_callback(keycode, is_down, outport, verbose=self.verbose)
 
     def start_keypad_listener(self):
+        if not self.midi_io_enabled:
+            return
         if self.keypad_listener and self.keypad_listener.is_alive():
             return  # già attivo
         self.keypad_stop_event.clear()

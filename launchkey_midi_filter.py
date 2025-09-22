@@ -227,6 +227,9 @@ def _apply_group_colors(outport, section, pid, group_id, mode="static"):
 
 def poll_ports(state_manager):
     """Handle Launchkey-specific port detection and listeners."""
+    if not getattr(state_manager, "midi_io_enabled", True):
+        return
+
     global _daw_connected, _daw_in_port, _daw_out_port
 
     daw_in_port = state_manager.find_port(DAW_IN_PORT_KEYWORD)
