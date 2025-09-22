@@ -23,6 +23,32 @@ class GraphicalSession:
     xauthority: str
 
 
+def _read_process_environ(pid: int) -> Dict[str, str]:
+    """Return the environment for the given ``pid``.
+
+    Access to ``/proc/<pid>/environ`` can fail for a number of reasons
+    (the process might no longer exist, or permissions might prevent the
+    read).  In that case we simply return an empty environment.
+    """
+
+    try:
+        with open(f"/proc/{pid}/environ", "rb") as environ_file:
+            data = environ_file.read()
+    except OSError:
+        return {}
+
+    env: Dict[str, str] = {}
+    for chunk in data.split(b"\0"):
+        if not chunk or b"=" not in chunk:
+            continue
+        key, value = chunk.split(b"=", 1)
+        try:
+            env[key.decode()] = value.decode()
+        except UnicodeDecodeError:
+            continue
+    return env
+
+
 def _session_properties(session_id: str) -> Dict[str, str]:
     try:
         output = subprocess.check_output(
@@ -38,6 +64,7 @@ def _session_properties(session_id: str) -> Dict[str, str]:
                 "--property=Active",
                 "--property=Remote",
                 "--property=Display",
+                "--property=Leader",
             ],
             text=True,
         )
@@ -82,10 +109,6 @@ def find_active_graphical_session() -> Optional[GraphicalSession]:
         if not (is_active or state_active):
             continue
 
-        display = props.get("Display", "").strip()
-        if not display:
-            continue
-
         username = props.get("Name") or props.get("User")
         if not username:
             continue
@@ -95,15 +118,41 @@ def find_active_graphical_session() -> Optional[GraphicalSession]:
         except KeyError:
             continue
 
-        runtime_dir = os.path.join("/run/user", str(pw_record.pw_uid))
+        leader_env: Dict[str, str] = {}
+        leader = props.get("Leader", "").strip()
+        if leader.isdigit():
+            leader_env = _read_process_environ(int(leader))
+
+        display = leader_env.get("DISPLAY", "").strip() or props.get("Display", "").strip()
+        if not display:
+            continue
+
+        runtime_dir = leader_env.get("XDG_RUNTIME_DIR", "").strip()
+        if not runtime_dir:
+            runtime_dir = os.path.join("/run/user", str(pw_record.pw_uid))
         if not os.path.isdir(runtime_dir):
             runtime_dir = ""
 
-        xauthority = ""
+        xauthority = leader_env.get("XAUTHORITY", "").strip()
+
         candidate_paths = []
         if runtime_dir:
-            candidate_paths.append(os.path.join(runtime_dir, "gdm/Xauthority"))
+            candidate_paths.extend(
+                [
+                    os.path.join(runtime_dir, "Xauthority"),
+                    os.path.join(runtime_dir, ".Xauthority"),
+                    os.path.join(runtime_dir, "gdm/Xauthority"),
+                ]
+            )
         candidate_paths.append(os.path.join(pw_record.pw_dir, ".Xauthority"))
+
+        if runtime_dir:
+            try:
+                for entry in sorted(os.listdir(runtime_dir)):
+                    if "authority" in entry.lower() or "xwaylandauth" in entry.lower():
+                        candidate_paths.append(os.path.join(runtime_dir, entry))
+            except OSError:
+                pass
 
         for candidate in candidate_paths:
             if candidate and os.path.isfile(candidate):
