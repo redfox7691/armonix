@@ -1,0 +1,18 @@
+[Unit]
+Description=Armonix MIDI controller
+After=network.target sound.target
+
+[Service]
+Type=simple
+User=armonix
+Group=armonix
+WorkingDirectory=/usr/lib/armonix
+ExecStart=/usr/bin/armonix
+Restart=on-failure
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

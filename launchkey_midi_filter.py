@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 import subprocess
@@ -17,6 +18,9 @@ from sysex_utils import (
     sysex_custom,
 )
 from custom_sysex_lookup import CUSTOM_SYSEX_LOOKUP
+from paths import get_config_path
+
+logger = logging.getLogger(__name__)
 
 MASTER_PORT_KEYWORD = "Launchkey MK3 88 LKMK3 MIDI In"
 DAW_IN_PORT_KEYWORD = "Launchkey MK3 88 LKMK3 DAW In"
@@ -26,7 +30,7 @@ DAW_OUT_PORT_KEYWORD = "Launchkey MK3 88 LKMK3 DAW In"
 # --- Config loading -------------------------------------------------------
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
-_config_path = os.path.join(base_dir, "launchkey_config.json")
+_config_path = get_config_path("launchkey_config.json")
 
 
 def _load_launchkey_filters(path):
@@ -49,7 +53,8 @@ def _load_launchkey_filters(path):
             line = re.sub(r"#.*", "", line)
             cleaned.append(line)
         data = json.loads("".join(cleaned))
-    except Exception:
+    except Exception as exc:
+        logger.error("Impossibile caricare il file di configurazione Launchkey '%s': %s", path, exc)
         data = {}
 
     for grp in data.get("SELECTOR_GROUPS", []):
@@ -344,6 +349,9 @@ def start_daw_listener(state_manager):
         except Exception as e:
             if state_manager.verbose:
                 print(f"[DAW] Errore: {e}")
+            state_manager.logger.exception(
+                "[DAW] Errore durante l'ascolto della porta DAW"
+            )
 
     _daw_listener_thread = threading.Thread(target=daw_listener, daemon=True)
     _daw_listener_thread.start()
@@ -406,6 +414,9 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
         except Exception as e:
             if verbose:
                 print(f"[LAUNCHKEY-DAW-FILTER] Errore apertura porta Ketron: {e}")
+            state_manager.logger.exception(
+                "Errore apertura porta Ketron dalla porta DAW Launchkey"
+            )
             return
 
     if verbose:

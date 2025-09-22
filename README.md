@@ -48,12 +48,25 @@ PyQt5) use the headless option:
 python main.py --headless
 ```
 
-Two helper scripts are included:
+## Debian package and system service
 
-* `start_immortal.sh` runs `main.py` in a loop and automatically restarts
-  the program if it exits.
-* `start-touchdesk.sh` tries to connect to the Ketron EVM via VNC when
-  the expected network is detected.
+The project ships with a packaging recipe that builds a Debian package for
+Raspberry Pi and Debian/Ubuntu systems:
+
+```bash
+make deb
+```
+
+The command produces `build/deb/armonix_0.99.deb`.  The package installs
+Armonix under `/usr/lib/armonix`, deploys configuration files in
+`/etc/armonix` and registers a `systemd` service (`armonix.service`) that
+starts the application at boot as the dedicated user `armonix`.
+
+Configuration defaults are always available under
+`/usr/share/armonix/examples`.  To restore the factory settings simply copy
+the desired files back to `/etc/armonix` and restart the service.  The Wi-Fi
+and VNC automation formerly provided by `start-touchdesk.sh` is now handled
+directly by the daemon through the `[wifi]` section in `armonix.conf`.
 
 ## Manual tests
 

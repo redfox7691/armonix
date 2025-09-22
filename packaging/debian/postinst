@@ -1,0 +1,24 @@
+#!/bin/sh
+set -e
+
+if ! id -u armonix >/dev/null 2>&1; then
+    adduser --system --group --home /var/lib/armonix --shell /usr/sbin/nologin armonix
+fi
+
+if command -v adduser >/dev/null 2>&1; then
+    adduser armonix audio >/dev/null 2>&1 || true
+else
+    usermod -a -G audio armonix >/dev/null 2>&1 || true
+fi
+
+install -d -o armonix -g armonix /var/lib/armonix
+
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    if [ "$1" = "configure" ]; then
+        systemctl enable armonix.service >/dev/null 2>&1 || true
+        systemctl restart armonix.service >/dev/null 2>&1 || true
+    fi
+fi
+
+exit 0
