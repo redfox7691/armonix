@@ -57,7 +57,7 @@ Raspberry Pi and Debian/Ubuntu systems:
 make deb
 ```
 
-The command produces `build/deb/armonix_0.99.deb`.  The package installs
+The command produces `build/deb/armonix_0.99.7.deb`.  The package installs
 Armonix under `/usr/lib/armonix`, deploys configuration files in
 `/etc/armonix` and registers a `systemd` service (`armonix.service`) that
 starts the application at boot as the dedicated user `armonix`.

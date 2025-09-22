@@ -1,6 +1,7 @@
 [Unit]
 Description=Armonix GUI and VNC helper (user session)
 PartOf=graphical-session.target
+After=graphical-session.target
 
 [Service]
 Type=simple
@@ -9,4 +10,4 @@ Restart=on-failure
 Environment=PYTHONUNBUFFERED=1
 
 [Install]
-WantedBy=graphical-session.target
+WantedBy=default.target

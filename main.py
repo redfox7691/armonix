@@ -11,6 +11,7 @@ from configuration import load_config
 from session_utils import build_session_environment, find_active_graphical_session
 from statemanager import StateManager
 from wifi_vnc import WifiVncLauncher
+from version import __version__ as ARMONIX_VERSION
 
 
 class _LoggerWriter:
@@ -240,7 +241,8 @@ def main(argv: Optional[list[str]] = None) -> None:
     sys.stderr = _LoggerWriter(logging.ERROR)
 
     logger.info(
-        "Armonix 0.99 avviato (config=%s, master=%s, modalità=%s)",
+        "Armonix %s avviato (config=%s, master=%s, modalità=%s)",
+        ARMONIX_VERSION,
         args.config,
         args.master,
         "headless" if args.headless else "gui",
