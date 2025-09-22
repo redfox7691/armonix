@@ -1,10 +1,14 @@
 import argparse
 import logging
+import os
 import sys
+import threading
 import time
 from logging.handlers import SysLogHandler
+from typing import Optional
 
 from configuration import load_config
+from session_utils import build_session_environment, find_active_graphical_session
 from statemanager import StateManager
 from wifi_vnc import WifiVncLauncher
 
@@ -141,41 +145,29 @@ def main() -> None:
         wifi_launcher = WifiVncLauncher(config.wifi, logger=wifi_logger)
         wifi_launcher.start()
 
+    state_manager = StateManager(
+        verbose=args.verbose,
+        master=args.master,
+        disable_realtime_display=args.disable_realtime_display,
+        master_port_keyword=config.midi.master_port_keyword,
+        ketron_port_keyword=config.midi.ketron_port_keyword,
+        ble_port_keyword=config.midi.bluetooth_port_keyword,
+        keypad_device=config.keypad_device,
+        logger=logging.getLogger("armonix.statemanager"),
+    )
+
     try:
         if args.headless:
             logger.info("Modalità headless attiva")
-            state_manager = StateManager(
-                verbose=args.verbose,
-                master=args.master,
-                disable_realtime_display=args.disable_realtime_display,
-                master_port_keyword=config.midi.master_port_keyword,
-                ketron_port_keyword=config.midi.ketron_port_keyword,
-                ble_port_keyword=config.midi.bluetooth_port_keyword,
-                keypad_device=config.keypad_device,
-                logger=logging.getLogger("armonix.statemanager"),
-            )
             while True:
                 time.sleep(1)
         else:
             logger.info("Modalità grafica attiva")
-            from PyQt5 import QtWidgets
-            from ledbar import LedBar
-
-            app = QtWidgets.QApplication(sys.argv)
-            state_manager = StateManager(
-                verbose=args.verbose,
-                master=args.master,
-                disable_realtime_display=args.disable_realtime_display,
-                master_port_keyword=config.midi.master_port_keyword,
-                ketron_port_keyword=config.midi.ketron_port_keyword,
-                ble_port_keyword=config.midi.bluetooth_port_keyword,
-                keypad_device=config.keypad_device,
-                logger=logging.getLogger("armonix.statemanager"),
+            _run_gui_mode(
+                config=config,
+                logger=logger,
+                state_manager=state_manager,
             )
-            led_bar = LedBar(states_getter=state_manager.get_led_states)
-            state_manager.set_ledbar(led_bar)
-            led_bar.set_state_manager(state_manager)
-            app.exec_()
     except KeyboardInterrupt:
         logger.info("Terminazione richiesta dall'utente")
     except Exception:
@@ -184,6 +176,115 @@ def main() -> None:
     finally:
         if wifi_launcher:
             wifi_launcher.stop()
+
+
+def _run_gui_mode(config, logger, state_manager) -> None:
+    from PyQt5 import QtCore, QtWidgets
+    from ledbar import LedBar
+
+    poll_interval = max(1, config.wifi.poll_interval)
+
+    app: Optional[QtWidgets.QApplication] = None
+
+    session_logger = logging.getLogger("armonix.gui")
+    session_logger.propagate = False
+    for handler in list(session_logger.handlers):
+        session_logger.removeHandler(handler)
+    for handler in logger.handlers:
+        session_logger.addHandler(handler)
+    session_logger.setLevel(logger.level)
+
+    while True:
+        session = _wait_for_graphical_session(session_logger, poll_interval)
+        if not session:
+            return
+
+        env = build_session_environment(session)
+        os.environ.update(env)
+
+        if app is None:
+            app = QtWidgets.QApplication(sys.argv)
+
+        led_bar = LedBar(states_getter=state_manager.get_led_states)
+        state_manager.set_ledbar(led_bar)
+        led_bar.set_state_manager(state_manager)
+        session_logger.info(
+            "Avvio della barra LED per l'utente '%s'.",
+            session.username,
+        )
+
+        session_lost = threading.Event()
+
+        def _request_quit() -> None:
+            if session_lost.is_set():
+                return
+            session_lost.set()
+            QtCore.QTimer.singleShot(0, app.quit)
+
+        monitor = _SessionMonitor(
+            session_id=session.session_id,
+            poll_interval=poll_interval,
+            on_session_lost=_request_quit,
+        )
+        monitor.start()
+
+        try:
+            app.exec_()
+        finally:
+            monitor.stop()
+            monitor.join()
+
+            led_bar.close()
+            state_manager.set_ledbar(None)
+
+        if session_lost.is_set():
+            session_logger.info(
+                "Sessione grafica terminata: in attesa di un nuovo login per riattivare la barra LED."
+            )
+            continue
+
+        break
+
+
+class _SessionMonitor(threading.Thread):
+    def __init__(self, session_id: str, poll_interval: int, on_session_lost) -> None:
+        super().__init__(daemon=True)
+        self.session_id = session_id
+        self.poll_interval = max(1, poll_interval)
+        self.on_session_lost = on_session_lost
+        self._stop_event = threading.Event()
+
+    def stop(self) -> None:
+        self._stop_event.set()
+
+    def run(self) -> None:  # pragma: no cover - system interaction
+        while not self._stop_event.wait(self.poll_interval):
+            session = find_active_graphical_session()
+            if not session or session.session_id != self.session_id:
+                self.on_session_lost()
+                return
+
+
+def _wait_for_graphical_session(logger, poll_interval: int):
+    logged_waiting = False
+
+    while True:
+        session = find_active_graphical_session()
+        if session:
+            logger.info(
+                "Sessione grafica rilevata per l'utente '%s' (display %s).",
+                session.username,
+                session.display or "n/d",
+            )
+            return session
+
+        if not logged_waiting:
+            logger.info(
+                "Nessuna sessione grafica locale attiva: la barra LED verrà avviata non appena disponibile."
+            )
+            logged_waiting = True
+
+        time.sleep(max(1, poll_interval))
 
 
 if __name__ == "__main__":

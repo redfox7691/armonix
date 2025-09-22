@@ -63,16 +63,19 @@ Imposta il percorso del device eventi del keypad USB.
 .B [wifi]
 Sezione opzionale che replica il comportamento dello script storico
 .I start-touchdesk.sh
-. Quando sono impostati 
+. Quando sono impostati
 .B ssid
 e
 .B vnc_command
-il servizio controlla periodicamente la rete Wi-Fi connessa e avvia il comando VNC specificato
-quando viene rilevata la rete indicata. È possibile impostare variabili d'ambiente come
-.B display
+il servizio controlla periodicamente la rete Wi-Fi connessa e la presenza di una sessione
+grafica locale: il comando VNC viene avviato quando entrambe le condizioni sono soddisfatte.
+L'intervallo di polling è configurabile tramite la chiave
+.B poll_interval
+(espressa in secondi) e le variabili d'ambiente richieste dalla sessione grafica (ad esempio
+.B DISPLAY
 e
-.B xdg_runtime_dir
-per preparare la sessione grafica.
+.B DBUS_SESSION_BUS_ADDRESS
+) vengono impostate automaticamente.
 .P
 I file
 .I /etc/armonix/keypad_config.json
