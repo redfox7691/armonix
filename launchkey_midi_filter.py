@@ -129,18 +129,23 @@ def _send_display(outport, line1, line2, verbose=False):
 def init_default_display(outport, verbose=False):
     """Compute default message with git info and show it."""
     global _default_lines
-    try:
-        version = subprocess.check_output(
-            ["git", "rev-list", "--count", "HEAD"], cwd=base_dir
-        ).decode().strip()
-    except Exception:
+    git_dir = os.path.join(base_dir, ".git")
+    if os.path.isdir(git_dir):
+        try:
+            version = subprocess.check_output(
+                ["git", "rev-list", "--count", "HEAD"], cwd=base_dir
+            ).decode().strip()
+        except Exception:
+            version = "0"
+        try:
+            date = subprocess.check_output(
+                ["git", "log", "-1", "--format=%cd", "--date=format:%d/%m/%Y"],
+                cwd=base_dir,
+            ).decode().strip()
+        except Exception:
+            date = datetime.now().strftime("%d/%m/%Y")
+    else:
         version = "0"
-    try:
-        date = subprocess.check_output(
-            ["git", "log", "-1", "--format=%cd", "--date=format:%d/%m/%Y"],
-            cwd=base_dir,
-        ).decode().strip()
-    except Exception:
         date = datetime.now().strftime("%d/%m/%Y")
     line1 = "Armonix".center(16)
     line2 = f"{date} v{version}".center(16)
