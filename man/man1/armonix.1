@@ -1,0 +1,151 @@
+.TH ARMONIX 1 "April 2024" "Version 0.99.90a" "User Commands"
+.SH NAME
+armonix \- MIDI control services for Ketron keyboards
+.SH SYNOPSIS
+.B armonix
+.RI [ options ]
+.br
+.B armonix-gui
+.RI [ options ]
+.SH DESCRIPTION
+The
+.B armonix
+suite provides two complementary services for controlling a Ketron EVM
+keyboard.  The
+.B armonix
+command runs at boot as a system daemon and manages the MIDI routing,
+keypad input and Bluetooth connectivity without requiring a graphical
+session.  The
+.B armonix-gui
+command is started after a graphical login and is responsible for the Qt
+LED bar as well as for launching the configured VNC client when the EVM
+is reachable on
+.BR 192.168.1.5 :5901 .
+.P
+Both commands read their configuration from
+.I /etc/armonix/armonix.conf
+or from a custom file specified with
+.BR --config .
+Logging is sent to the system journal; enabling verbose mode adds debug
+messages.
+.SH OPTIONS FOR ARMONIX
+The following options apply to the core MIDI service:
+.TP
+.BR --config " " file
+Use an alternate configuration file.
+.TP
+.BR --master " " { fantom \(ba launchkey }
+Select the connected master keyboard and load the matching filters.
+.TP
+.B --verbose
+Enable verbose logging (also configurable from the configuration file).
+.TP
+.B --no-verbose
+Disable verbose logging.
+.TP
+.B --disable_realtime_display
+Disable the realtime display on the master keyboard.
+.TP
+.B --enable_realtime_display
+Re-enable the realtime display on the master keyboard.
+.SH OPTIONS FOR ARMONIX-GUI
+The graphical helper recognises the following options:
+.TP
+.BR --config " " file
+Use an alternate configuration file.
+.TP
+.BR --master " " { fantom \(ba launchkey }
+Inspect MIDI ports using the selected master keyboard profile.
+.TP
+.B --verbose
+Enable verbose logging.
+.TP
+.B --no-verbose
+Disable verbose logging.
+.TP
+.B --headless
+Do not start the Qt LED bar (still monitor the EVM to launch VNC).
+.TP
+.B --gui
+Force the Qt LED bar even if the configuration requests headless mode.
+.TP
+.B --enable-vnc
+Start the VNC monitor thread (default when a command is configured).
+.TP
+.B --disable-vnc
+Skip the VNC monitor.
+.SH CONFIGURATION
+The
+.I /etc/armonix/armonix.conf
+file stores all runtime options:
+.TP
+.B [armonix]
+Defines the master keyboard, default verbosity and whether the GUI helper
+should start in headless mode.
+.TP
+.B [midi]
+Specifies custom keywords for MIDI port detection.  Leaving the values
+blank falls back to the defaults provided by the selected master filter.
+.TP
+.B [keypad]
+Configures the input device used by the optional USB keypad.
+.TP
+.B [vnc]
+Defines the command to run when the EVM responds on
+.BR 192.168.1.5 :5901
+and the polling interval (in seconds).
+.P
+Factory defaults are shipped under
+.I /usr/share/armonix/examples
+and can be restored by copying the desired files to
+.I /etc/armonix
+followed by a service restart.
+.SH FILES
+.TP
+.I /usr/lib/armonix
+Contains the Python modules implementing the services and the default
+configuration files.
+.TP
+.I /etc/armonix
+Holds the editable configuration files.
+.TP
+.I /usr/share/armonix/examples
+Copies of the factory configuration shipped for convenience.
+.TP
+.I /usr/lib/systemd/system/armonix.service
+Systemd unit that starts the core MIDI service during boot.
+.TP
+.I /usr/lib/systemd/user/armonix-gui.service
+Systemd user unit that launches the graphical helper after login.
+.SH SERVICE MANAGEMENT
+The Debian package installs
+.B armonix.service
+which runs as the unprivileged user
+.B armonix
+and starts automatically at boot.  The graphical helper is managed by the
+user service
+.B armonix-gui.service
+and is bound to the graphical session.
+.P
+Both services can be inspected with
+.BR systemctl (1)
+(e.g.
+.BR "systemctl status armonix" )
+and restarted when configuration changes occur.
+.SH TROUBLESHOOTING
+Use
+.BR aplaymidi (1)
+for MIDI outputs and
+.BR amidi (1)
+for raw MIDI ports to discover the names used by the system.  The command
+.B "python3 -m mido.list_ports"
+also provides a comprehensive overview.  Insert the relevant strings into
+the
+.B [midi]
+configuration section when necessary.
+.P
+Logs emitted by Armonix are available via the system journal (for example
+.BR "journalctl -u armonix" ).
+.SH SEE ALSO
+.BR systemctl (1),
+.BR journalctl (1)

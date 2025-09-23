@@ -1,0 +1,156 @@
+.TH ARMONIX 1 "Aprile 2024" "Versione 0.99.90a" "Comandi utente"
+.SH NOME
+armonix \- servizi MIDI di controllo per tastiere Ketron
+.SH SINTASSI
+.B armonix
+.RI [ opzioni ]
+.br
+.B armonix-gui
+.RI [ opzioni ]
+.SH DESCRIZIONE
+La suite
+.B armonix
+fornisce due servizi complementari per controllare la tastiera Ketron EVM.
+Il comando
+.B armonix
+viene eseguito all'avvio come demone di sistema e gestisce l'instradamento
+MIDI, l'input del keypad e la connettività Bluetooth senza richiedere una
+sessione grafica.  Il comando
+.B armonix-gui
+parte dopo il login grafico e si occupa della barra LED Qt e dell'avvio del
+client VNC configurato quando l'EVM è raggiungibile su
+.BR 192.168.1.5 :5901 .
+.P
+Entrambi i comandi leggono la configurazione da
+.I /etc/armonix/armonix.conf
+oppure da un file personalizzato specificato con
+.BR --config .
+I log vengono inviati al journal di sistema; attivando la modalità verbose
+si aggiungono anche i messaggi di debug.
+.SH OPZIONI DI ARMONIX
+Le seguenti opzioni si applicano al servizio MIDI principale:
+.TP
+.BR --config " " file
+Utilizza un file di configurazione alternativo.
+.TP
+.BR --master " " { fantom \(ba launchkey }
+Seleziona la master keyboard collegata e carica i filtri appropriati.
+.TP
+.B --verbose
+Abilita il logging dettagliato (configurabile anche dal file di
+configurazione).
+.TP
+.B --no-verbose
+Disabilita il logging dettagliato.
+.TP
+.B --disable_realtime_display
+Disabilita la visualizzazione in tempo reale sulla master keyboard.
+.TP
+.B --enable_realtime_display
+Riabilita la visualizzazione in tempo reale sulla master keyboard.
+.SH OPZIONI DI ARMONIX-GUI
+Il servizio grafico riconosce le seguenti opzioni:
+.TP
+.BR --config " " file
+Utilizza un file di configurazione alternativo.
+.TP
+.BR --master " " { fantom \(ba launchkey }
+Controlla le porte MIDI usando il profilo della master selezionata.
+.TP
+.B --verbose
+Abilita il logging dettagliato.
+.TP
+.B --no-verbose
+Disabilita il logging dettagliato.
+.TP
+.B --headless
+Non avviare la barra LED Qt (continua comunque a monitorare l'EVM per
+lanciare VNC).
+.TP
+.B --gui
+Forza l'avvio della barra LED Qt anche se la configurazione richiede la
+modalità headless.
+.TP
+.B --enable-vnc
+Avvia il thread di monitoraggio VNC (attivo per impostazione predefinita
+quando è configurato un comando).
+.TP
+.B --disable-vnc
+Salta il monitor VNC.
+.SH CONFIGURAZIONE
+Il file
+.I /etc/armonix/armonix.conf
+contiene tutte le opzioni operative:
+.TP
+.B [armonix]
+Definisce la master keyboard, la verbosità predefinita e se il servizio
+grafico deve partire in modalità headless.
+.TP
+.B [midi]
+Specifica parole chiave personalizzate per rilevare le porte MIDI.  Lasciare
+vuoti i valori per utilizzare i predefiniti del filtro associato alla
+master selezionata.
+.TP
+.B [keypad]
+Configura il dispositivo di input utilizzato dal keypad USB opzionale.
+.TP
+.B [vnc]
+Definisce il comando da eseguire quando l'EVM risponde su
+.BR 192.168.1.5 :5901
+e l'intervallo di polling (in secondi).
+.P
+I valori di fabbrica sono disponibili in
+.I /usr/share/armonix/examples
+e possono essere ripristinati copiando i file desiderati in
+.I /etc/armonix
+seguiti dal riavvio dei servizi.
+.SH FILE
+.TP
+.I /usr/lib/armonix
+Contiene i moduli Python dei servizi e le configurazioni predefinite.
+.TP
+.I /etc/armonix
+Ospita i file di configurazione modificabili.
+.TP
+.I /usr/share/armonix/examples
+Copie delle configurazioni di fabbrica fornite per comodità.
+.TP
+.I /usr/lib/systemd/system/armonix.service
+Unità systemd che avvia il servizio MIDI principale durante il boot.
+.TP
+.I /usr/lib/systemd/user/armonix-gui.service
+Unità systemd utente che lancia il servizio grafico dopo il login.
+.SH GESTIONE DEI SERVIZI
+Il pacchetto Debian installa
+.B armonix.service
+che viene eseguito come utente non privilegiato
+.B armonix
+e parte automaticamente all'accensione.  Il servizio grafico è gestito
+dall'unità utente
+.B armonix-gui.service
+ed è legato alla sessione grafica.
+.P
+Entrambi i servizi possono essere controllati con
+.BR systemctl (1)
+(ad esempio
+.BR "systemctl status armonix" )
+e riavviati dopo le modifiche di configurazione.
+.SH RISOLUZIONE DEI PROBLEMI
+Usare
+.BR aplaymidi (1)
+per le uscite MIDI e
+.BR amidi (1)
+per le porte raw al fine di individuare i nomi utilizzati dal sistema.  Il
+comando
+.B "python3 -m mido.list_ports"
+fornisce una panoramica completa.  Inserire quindi le stringhe rilevanti
+nella sezione di configurazione
+.B [midi]
+quando necessario.
+.P
+I log generati da Armonix sono disponibili tramite il journal di sistema
+(ad esempio
+.BR "journalctl -u armonix" ).
+.SH VEDI ANCHE
+.BR systemctl (1),
+.BR journalctl (1)
