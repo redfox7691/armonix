@@ -7,7 +7,7 @@ BASE_DIR = "/usr/lib/armonix"
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-from main import main
+from armonix_service import main
 
 
 if __name__ == "__main__":

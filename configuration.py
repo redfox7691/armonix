@@ -31,14 +31,13 @@ def _as_int(value: str, default: int) -> int:
 
 
 @dataclass(frozen=True)
-class WifiConfig:
-    ssid: str = ""
-    vnc_command: str = ""
+class VncConfig:
+    command: str = ""
     poll_interval: int = 5
 
     @property
     def enabled(self) -> bool:
-        return bool(self.ssid and self.vnc_command)
+        return bool(self.command)
 
 
 @dataclass(frozen=True)
@@ -58,7 +57,7 @@ class ArmonixConfig:
         "/dev/input/by-id/usb-1189_USB_Composite_Device_CD70134330363235-if01-event-kbd"
     )
     midi: MidiConfig = dataclasses.field(default_factory=MidiConfig)
-    wifi: WifiConfig = dataclasses.field(default_factory=WifiConfig)
+    vnc: VncConfig = dataclasses.field(default_factory=VncConfig)
     source_path: str = get_default_config_path("armonix.conf")
 
 
@@ -90,19 +89,17 @@ def load_config(path: Optional[str] = None) -> ArmonixConfig:
         parser.get("midi", "bluetooth_port_keyword", fallback="Bluetooth").strip()
     )
 
-    wifi_ssid = parser.get("wifi", "ssid", fallback="").strip()
-    wifi_cmd = parser.get("wifi", "vnc_command", fallback="").strip()
-    wifi_interval = _as_int(parser.get("wifi", "poll_interval", fallback="5"), 5)
+    vnc_cmd = parser.get("vnc", "command", fallback="").strip()
+    vnc_interval = _as_int(parser.get("vnc", "poll_interval", fallback="5"), 5)
     midi_cfg = MidiConfig(
         master_port_keyword=master_keyword,
         ketron_port_keyword=ketron_keyword,
         bluetooth_port_keyword=bluetooth_keyword,
     )
 
-    wifi_cfg = WifiConfig(
-        ssid=wifi_ssid,
-        vnc_command=wifi_cmd,
-        poll_interval=wifi_interval,
+    vnc_cfg = VncConfig(
+        command=vnc_cmd,
+        poll_interval=vnc_interval,
     )
 
     return ArmonixConfig(
@@ -112,6 +109,6 @@ def load_config(path: Optional[str] = None) -> ArmonixConfig:
         disable_realtime_display=disable_display,
         keypad_device=keypad_device,
         midi=midi_cfg,
-        wifi=wifi_cfg,
+        vnc=vnc_cfg,
         source_path=source_path,
     )

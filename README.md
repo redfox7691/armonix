@@ -34,18 +34,19 @@ other environments with minimal effort.
 
 ## Running
 
-The main program is `main.py` which also shows a small status LED bar.
-Run it with:
+The core MIDI engine is provided by `armonix_service.py`, which runs
+without any graphical dependencies.  Start it with:
 
 ```bash
-python main.py --verbose
+python armonix_service.py --verbose
 ```
 
-To run Armonix on a machine without a display (and without installing
-PyQt5) use the headless option:
+The optional graphical helper (`armonix_gui_service.py`) can be launched
+after logging in to display the LED bar and, when requested, to run the
+configured VNC command:
 
 ```bash
-python main.py --headless
+python armonix_gui_service.py --gui
 ```
 
 ## Debian package and system service
@@ -57,16 +58,18 @@ Raspberry Pi and Debian/Ubuntu systems:
 make deb
 ```
 
-The command produces `build/deb/armonix_0.99.7.deb`.  The package installs
+The command produces `build/deb/armonix_0.99.90a.deb`.  The package installs
 Armonix under `/usr/lib/armonix`, deploys configuration files in
 `/etc/armonix` and registers a `systemd` service (`armonix.service`) that
-starts the application at boot as the dedicated user `armonix`.
+starts the MIDI engine at boot as the dedicated user `armonix`.  A user
+service (`armonix-gui.service`) is also installed and runs the graphical
+helper after a graphical login.
 
 Configuration defaults are always available under
 `/usr/share/armonix/examples`.  To restore the factory settings simply copy
-the desired files back to `/etc/armonix` and restart the service.  The Wi-Fi
-and VNC automation formerly provided by `start-touchdesk.sh` is now handled
-directly by the daemon through the `[wifi]` section in `armonix.conf`.
+the desired files back to `/etc/armonix` and restart the services.  The VNC
+automation formerly provided by `start-touchdesk.sh` is now handled by the
+graphical helper through the `[vnc]` section in `armonix.conf`.
 
 ## Manual tests
 
