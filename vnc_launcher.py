@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import socket
 import subprocess
 import threading
 from typing import Optional
@@ -12,7 +11,6 @@ from typing import Optional
 from configuration import VncConfig
 
 EVM_HOST = "192.168.5.1"
-EVM_PORT = 5900
 
 
 class VncLauncher(threading.Thread):
@@ -33,13 +31,18 @@ class VncLauncher(threading.Thread):
         self._announced_waiting = False
 
     def _is_evm_reachable(self) -> bool:
-        """Check the TCP port exposed by the EVM. / Controlla la porta TCP esposta dall'EVM."""
+        """Check if the EVM responds to ping. / Controlla se l'EVM risponde al ping."""
 
         try:
-            with socket.create_connection((EVM_HOST, EVM_PORT), timeout=2):
-                return True
+            result = subprocess.run(
+                ["ping", "-c", "1", "-W", "1", EVM_HOST],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
         except OSError:
             return False
+        return result.returncode == 0
 
     def _launch(self) -> None:
         """Launch the VNC client if not already running. / Avvia il client VNC se non è già in esecuzione."""
@@ -81,9 +84,9 @@ class VncLauncher(threading.Thread):
             if self._is_evm_reachable():
                 if not self._announced_reachable:
                     self.logger.info(
-                        "EVM port %s is reachable. / La porta %s dell'EVM è raggiungibile.",
-                        EVM_PORT,
-                        EVM_PORT,
+                        "EVM host %s responded to ping. / L'host EVM %s ha risposto al ping.",
+                        EVM_HOST,
+                        EVM_HOST,
                     )
                     self._announced_reachable = True
                     self._announced_waiting = False
