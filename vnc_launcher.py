@@ -73,13 +73,19 @@ class VncLauncher(threading.Thread):
         )
 
         while not self.stop_event.is_set():
-            if self._process and self._process.poll() is not None:
+            if self._process:
+                if self._process.poll() is None:
+                    self.stop_event.wait(max(1, self.config.poll_interval))
+                    continue
+
                 self.logger.info(
                     "VNC command exited with code %s. / Comando VNC terminato con codice %s.",
                     self._process.returncode,
                     self._process.returncode,
                 )
                 self._process = None
+                self._announced_reachable = False
+                self._announced_waiting = False
 
             if self._is_evm_reachable():
                 if not self._announced_reachable:
