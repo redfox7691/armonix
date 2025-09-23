@@ -11,7 +11,7 @@ from typing import Optional
 
 from configuration import VncConfig
 
-EVM_HOST = "192.168.1.5"
+EVM_HOST = "192.168.5.1"
 EVM_PORT = 5900
 
 
