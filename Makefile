@@ -13,8 +13,8 @@ deb: clean_deb
 	mkdir -p $(PKG_DIR)/usr/share/$(PKG_NAME)/examples
 	mkdir -p $(PKG_DIR)/usr/lib/systemd/system
 	mkdir -p $(PKG_DIR)/usr/lib/systemd/user
-        mkdir -p $(PKG_DIR)/usr/share/man/man1
-        mkdir -p $(PKG_DIR)/usr/share/man/it/man1
+	mkdir -p $(PKG_DIR)/usr/share/man/man1
+	mkdir -p $(PKG_DIR)/usr/share/man/it/man1
 	mkdir -p $(PKG_DIR)/var/lib/$(PKG_NAME)
 
 	rsync -a --exclude 'build' --exclude '.git' --exclude '*.deb' ./ $(PKG_DIR)/usr/lib/$(PKG_NAME)/
@@ -32,8 +32,8 @@ deb: clean_deb
 
 	install -m644 packaging/armonix.service $(PKG_DIR)/usr/lib/systemd/system/armonix.service
 	install -m644 packaging/armonix-gui.service $(PKG_DIR)/usr/lib/systemd/user/armonix-gui.service
-        gzip -9 -c man/man1/armonix.1 > $(PKG_DIR)/usr/share/man/man1/armonix.1.gz
-        gzip -9 -c man/it/man1/armonix.1 > $(PKG_DIR)/usr/share/man/it/man1/armonix.1.gz
+	gzip -9 -c man/man1/armonix.1 > $(PKG_DIR)/usr/share/man/man1/armonix.1.gz
+	gzip -9 -c man/it/man1/armonix.1 > $(PKG_DIR)/usr/share/man/it/man1/armonix.1.gz
 
 	sed "s/@VERSION@/$(VERSION)/" packaging/debian/control.in > $(PKG_DIR)/DEBIAN/control
 	cp packaging/debian/conffiles $(PKG_DIR)/DEBIAN/conffiles
