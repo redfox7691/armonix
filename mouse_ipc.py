@@ -49,7 +49,7 @@ class MouseCommandServer:
         server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         server_socket.bind(self.socket_path)
         try:
-            os.chmod(self.socket_path, 0o660)
+            os.chmod(self.socket_path, 0o666)
         except OSError as exc:
             self.logger.warning("Impossibile impostare i permessi del socket %s: %s", self.socket_path, exc)
         server_socket.listen(1)
