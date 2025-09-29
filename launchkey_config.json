@@ -25,7 +25,7 @@
     { "note": 100,  "channel": 0,  "type": "TABS", "name": "PIANIST", "color": 45, "color_pressed": 3, "colormode": "static" },
     { "note": 102,  "channel": 0,  "type": "CUSTOM", "name": "MICRO 1 SWITCH", "color": 4, "color_on": 5, "color_off": 7,"colormode": "static" },
     { "note": 103,  "channel": 0,  "type": "CUSTOM", "name": "VOICETRON SWITCH", "color": 52, "color_on": 53, "color_off": 55, "colormode": "static" },
-    { "note": 112,  "channel": 0,  "type": "CUSTOM", "name": "ARR.A-BREAK", "group": 1, "color": 23, "colormode": "static" },
+    { "note": 112,  "channel": 0,  "type": "MOUSE", "X": 100, "Y": 50, "group": 1, "color": 23, "colormode": "static" },
     { "note": 113,  "channel": 0,  "type": "CUSTOM", "name": "ARR.B-BREAK", "group": 1, "color": 23, "colormode": "static" },
     { "note": 114,  "channel": 0,  "type": "CUSTOM", "name": "ARR.C-BREAK", "group": 1, "color": 23, "colormode": "static" },
     { "note": 115,  "channel": 0,  "type": "CUSTOM", "name": "ARR.D-BREAK", "group": 1, "color": 23, "colormode": "static" },
