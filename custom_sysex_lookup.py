@@ -55,6 +55,7 @@ CUSTOM_SYSEX_LOOKUP = {
                 ],
             },
             {
+                "name": "ARRA_A_FILL",
                 "min": 1,
                 "max": 109,
                 "sysex": [
@@ -73,7 +74,7 @@ CUSTOM_SYSEX_LOOKUP = {
     "ARR.B-BREAK": {
         "levels": [
             {
-                "name": "ARRA_A_BREAK",
+                "name": "ARRA_B_BREAK",
                 "min": 110,
                 "max": 127,
                 "color": 55,
@@ -84,6 +85,7 @@ CUSTOM_SYSEX_LOOKUP = {
                 ],
             },
             {
+                "name": "ARRA_B_FILL",
                 "min": 1,
                 "max": 109,
                 "sysex": [
@@ -102,7 +104,7 @@ CUSTOM_SYSEX_LOOKUP = {
     "ARR.C-BREAK": {
         "levels": [
             {
-                "name": "ARRA_A_BREAK",
+                "name": "ARRA_C_BREAK",
                 "min": 110,
                 "max": 127,
                 "color": 55,
@@ -113,6 +115,7 @@ CUSTOM_SYSEX_LOOKUP = {
                 ],
             },
             {
+                "name": "ARRA_C_FILL",
                 "min": 1,
                 "max": 109,
                 "sysex": [
@@ -131,7 +134,7 @@ CUSTOM_SYSEX_LOOKUP = {
     "ARR.D-BREAK": {
         "levels": [
             {
-                "name": "ARRA_A_BREAK",
+                "name": "ARRA_D_BREAK",
                 "min": 110,
                 "max": 127,
                 "color": 55,
@@ -142,6 +145,7 @@ CUSTOM_SYSEX_LOOKUP = {
                 ],
             },
             {
+                "name": "ARRA_D_FILL",
                 "min": 1,
                 "max": 109,
                 "sysex": [
