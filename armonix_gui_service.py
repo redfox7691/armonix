@@ -16,6 +16,7 @@ from services_common import (
     create_state_manager,
     setup_child_logger,
 )
+from mouse_ipc import MouseCommandServer
 from vnc_launcher import VncLauncher
 from version import __version__ as ARMONIX_VERSION
 
@@ -125,18 +126,21 @@ def main(argv: Optional[list[str]] = None) -> None:
     )
 
     vnc_logger = setup_child_logger("armonix.vnc", logger)
+    mouse_logger = setup_child_logger("armonix.mouse", logger)
 
     if args.headless:
-        _run_background_helpers(config, args, logger, vnc_logger)
+        _run_background_helpers(config, args, logger, vnc_logger, mouse_logger)
     else:
-        _run_gui_helpers(config, args, logger, vnc_logger)
+        _run_gui_helpers(config, args, logger, vnc_logger, mouse_logger)
 
 
-def _run_background_helpers(config, args, logger, vnc_logger) -> None:
+def _run_background_helpers(config, args, logger, vnc_logger, mouse_logger) -> None:
     """Run without the Qt LED bar. / Esegue senza la barra LED Qt."""
 
     launcher: Optional[VncLauncher] = None
+    mouse_server = MouseCommandServer(logger=mouse_logger)
     try:
+        mouse_server.start()
         if args.launch_vnc and config.vnc.enabled:
             launcher = VncLauncher(config.vnc, logger=vnc_logger)
             launcher.start()
@@ -146,11 +150,12 @@ def _run_background_helpers(config, args, logger, vnc_logger) -> None:
     except KeyboardInterrupt:
         logger.info("Shutdown requested by user. / Arresto richiesto dall'utente.")
     finally:
+        mouse_server.stop()
         if launcher:
             launcher.stop()
 
 
-def _run_gui_helpers(config, args, logger, vnc_logger) -> None:
+def _run_gui_helpers(config, args, logger, vnc_logger, mouse_logger) -> None:
     """Start the Qt LED bar and optional VNC watcher. / Avvia la barra LED Qt e il monitor VNC opzionale."""
 
     try:
@@ -164,6 +169,7 @@ def _run_gui_helpers(config, args, logger, vnc_logger) -> None:
         raise SystemExit(1) from exc
 
     launcher: Optional[VncLauncher] = None
+    mouse_server = MouseCommandServer(logger=mouse_logger)
     state_manager = create_state_manager(
         verbose=args.verbose,
         master=args.master,
@@ -182,6 +188,7 @@ def _run_gui_helpers(config, args, logger, vnc_logger) -> None:
     led_bar.set_state_manager(state_manager)
 
     try:
+        mouse_server.start()
         if args.launch_vnc and config.vnc.enabled:
             launcher = VncLauncher(config.vnc, logger=vnc_logger)
             launcher.start()
@@ -192,6 +199,7 @@ def _run_gui_helpers(config, args, logger, vnc_logger) -> None:
             launcher.stop()
         led_bar.close()
         state_manager.set_ledbar(None)
+        mouse_server.stop()
 
 
 if __name__ == "__main__":

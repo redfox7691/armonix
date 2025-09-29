@@ -1,7 +1,6 @@
 import json
 import logging
 import re
-import subprocess
 import threading
 
 import mido
@@ -18,6 +17,7 @@ from sysex_utils import (
 from custom_sysex_lookup import CUSTOM_SYSEX_LOOKUP
 from paths import get_config_path
 from version import __version__ as ARMONIX_VERSION
+from mouse_ipc import send_mouse_press, send_mouse_release
 
 logger = logging.getLogger(__name__)
 
@@ -162,11 +162,7 @@ def _mouse_press(x, y):
     except (TypeError, ValueError) as exc:
         logger.error("Coordinate mouse non valide (%s, %s): %s", x, y, exc)
         return
-    try:
-        subprocess.run(["xdotool", "mousemove", str(px), str(py)], check=True)
-        subprocess.run(["xdotool", "mousedown", "1"], check=True)
-    except Exception as exc:
-        logger.error("Impossibile simulare pressione mouse (%s, %s): %s", x, y, exc)
+    send_mouse_press(px, py, logger=logger)
 
 
 def _mouse_release(x, y):
@@ -176,11 +172,7 @@ def _mouse_release(x, y):
     except (TypeError, ValueError) as exc:
         logger.error("Coordinate mouse non valide (%s, %s): %s", x, y, exc)
         return
-    try:
-        subprocess.run(["xdotool", "mousemove", str(px), str(py)], check=True)
-        subprocess.run(["xdotool", "mouseup", "1"], check=True)
-    except Exception as exc:
-        logger.error("Impossibile simulare rilascio mouse (%s, %s): %s", x, y, exc)
+    send_mouse_release(px, py, logger=logger)
 
 
 def _send_color(outport, section, pid, color, mode="static", remember=True):
