@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import subprocess
 import threading
 
 import mido
@@ -152,6 +153,34 @@ _PRESSED_ACTIVE = set()
 
 def _color_key(section, pid):
     return (section, int(pid) & 0x7F)
+
+
+def _mouse_press(x, y):
+    try:
+        px = int(float(x))
+        py = int(float(y))
+    except (TypeError, ValueError) as exc:
+        logger.error("Coordinate mouse non valide (%s, %s): %s", x, y, exc)
+        return
+    try:
+        subprocess.run(["xdotool", "mousemove", str(px), str(py)], check=True)
+        subprocess.run(["xdotool", "mousedown", "1"], check=True)
+    except Exception as exc:
+        logger.error("Impossibile simulare pressione mouse (%s, %s): %s", x, y, exc)
+
+
+def _mouse_release(x, y):
+    try:
+        px = int(float(x))
+        py = int(float(y))
+    except (TypeError, ValueError) as exc:
+        logger.error("Coordinate mouse non valide (%s, %s): %s", x, y, exc)
+        return
+    try:
+        subprocess.run(["xdotool", "mousemove", str(px), str(py)], check=True)
+        subprocess.run(["xdotool", "mouseup", "1"], check=True)
+    except Exception as exc:
+        logger.error("Impossibile simulare rilascio mouse (%s, %s): %s", x, y, exc)
 
 
 def _send_color(outport, section, pid, color, mode="static", remember=True):
@@ -509,6 +538,28 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                     print(f"[LAUNCHKEY-DAW-FILTER] NOTE -> TABS {name} {'ON' if is_on else 'OFF'}")
                 if is_on and not state_manager.disable_realtime_display:
                     show_temp_display(daw_outport, "TABS", name, verbose)
+            elif rtype == "MOUSE":
+                x = rule.get("X")
+                y = rule.get("Y")
+                if x is None or y is None:
+                    logger.warning(
+                        "Regola MOUSE priva di coordinate per nota %s canale %s", msg.note, msg.channel
+                    )
+                elif is_on:
+                    _mouse_press(x, y)
+                    if verbose:
+                        print(f"[LAUNCHKEY-DAW-FILTER] NOTE -> MOUSE PRESS {x},{y}")
+                    if not state_manager.disable_realtime_display:
+                        show_temp_display(
+                            daw_outport,
+                            "MOUSE",
+                            f"{x},{y}",
+                            verbose,
+                        )
+                else:
+                    _mouse_release(x, y)
+                    if verbose:
+                        print(f"[LAUNCHKEY-DAW-FILTER] NOTE -> MOUSE RELEASE {x},{y}")
 
             if is_on:
                 group_id = rule.get("group")
@@ -559,7 +610,39 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                     daw_outport, "CC", msg.control, rule, is_on
                 )
                 return
-            if rtype in ("FOOTSWITCH", "TABS"):
+            if rtype == "MOUSE":
+                x = rule.get("X")
+                y = rule.get("Y")
+                if x is None or y is None:
+                    logger.warning(
+                        "Regola MOUSE priva di coordinate per CC %s canale %s", msg.control, msg.channel
+                    )
+                elif is_on:
+                    _mouse_press(x, y)
+                    if verbose:
+                        print(f"[LAUNCHKEY-DAW-FILTER] CC {msg.control} -> MOUSE PRESS {x},{y}")
+                    if not state_manager.disable_realtime_display:
+                        show_temp_display(
+                            daw_outport,
+                            "MOUSE",
+                            f"{x},{y}",
+                            verbose,
+                        )
+                else:
+                    _mouse_release(x, y)
+                    if verbose:
+                        print(f"[LAUNCHKEY-DAW-FILTER] CC {msg.control} -> MOUSE RELEASE {x},{y}")
+                if is_on:
+                    group_id = rule.get("group")
+                    if group_id is not None:
+                        _apply_group_colors(
+                            daw_outport,
+                            "CC",
+                            msg.control,
+                            group_id,
+                            rule.get("colormode", "static"),
+                        )
+            elif rtype in ("FOOTSWITCH", "TABS"):
                 status = 0x7F if is_on else 0x00
                 if rtype == "FOOTSWITCH" and name in FOOTSWITCH_LOOKUP:
                     val = FOOTSWITCH_LOOKUP[name]
