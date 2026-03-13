@@ -18,6 +18,7 @@ from custom_sysex_lookup import CUSTOM_SYSEX_LOOKUP
 from paths import get_config_path
 from version import __version__ as ARMONIX_VERSION
 from mouse_ipc import send_mouse_press, send_mouse_release
+from color_names import resolve_color
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +186,11 @@ def _send_color(outport, section, pid, color, mode="static", remember=True):
     mode_to_channel = {"stationary": 0, "flashing": 1, "pulsing": 2}
     colormode = mode_alias.get(mode, mode)
     chan = mode_to_channel.get(colormode, 0)
-    val = max(0, min(int(color), 127))
+    try:
+        val = resolve_color(color)
+    except (ValueError, TypeError) as exc:
+        logger.warning("_send_color: %s – usando 0 (off)", exc)
+        val = 0
     pid = int(pid) & 0x7F
 
     if remember:
@@ -335,12 +340,11 @@ def start_daw_listener(state_manager):
                                     color = meta.get("color_on")
                             if color is not None:
                                 colormode = meta.get("colormode", "static")
-                                color_val = max(0, min(int(color), 127))
                                 if state_manager.verbose:
                                     print(
-                                        f"[DAW] Colore {color_val} {colormode} su pid {int(pid) & 0x7F}"
+                                        f"[DAW] Colore {color!r} {colormode} su pid {int(pid) & 0x7F}"
                                     )
-                                _send_color(outport, section, pid, color_val, colormode)
+                                _send_color(outport, section, pid, color, colormode)
 
                             lcd_idx = meta.get("lcd_index")
                             lcd_name = meta.get("name")
