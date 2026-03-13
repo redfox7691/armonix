@@ -293,6 +293,11 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         filter_func = getattr(self.master_module, "filter_and_translate_msg")
 
         def master_listener():
+            # Capture the stop event locally so that a subsequent
+            # start_master_listener() call (which reassigns
+            # self.master_listener_stop) cannot accidentally keep this
+            # thread alive.
+            stop = self.master_listener_stop
             if self.verbose:
                 self.logger.debug(
                     "[MASTER-THREAD] Avvio thread, porta Master: %s, porta Ketron: %s",
@@ -303,8 +308,10 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
                 with mido.open_input(self.master_port) as inport, mido.open_output(self.ketron_port, exclusive=False) as outport:
                     if self.verbose:
                         self.logger.debug("[MASTER] In ascolto su %s.", self.master)
-                    while not self.master_listener_stop.is_set():
+                    while not stop.is_set():
                         for msg in inport.iter_pending():
+                            if stop.is_set():
+                                break
                             try:
                                 if self.verbose:
                                     self.logger.debug("[MASTER-DEBUG] Ricevuto: %s", msg)

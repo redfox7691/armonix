@@ -287,6 +287,11 @@ def start_daw_listener(state_manager):
     _daw_listener_stop = threading.Event()
 
     def daw_listener():
+        # Capture the stop event locally so that a subsequent call to
+        # start_daw_listener() (which replaces the module-level
+        # _daw_listener_stop with a new Event) cannot accidentally
+        # "un-stop" this thread.
+        stop = _daw_listener_stop
         if state_manager.verbose:
             print(
                 f"[DAW-THREAD] Avvio thread: porta DAW in={_daw_in_port}, out={_daw_out_port}"
@@ -349,12 +354,15 @@ def start_daw_listener(state_manager):
 
                 if state_manager.verbose:
                     print("[DAW] In ascolto sulla porta DAW.")
-                for msg in inport:
-                    if _daw_listener_stop.is_set():
-                        break
-                    filter_and_translate_launchkey_daw_msg(
-                        msg, outport, state_manager, verbose=state_manager.verbose
-                    )
+                import time as _time
+                while not stop.is_set():
+                    for msg in inport.iter_pending():
+                        if stop.is_set():
+                            break
+                        filter_and_translate_launchkey_daw_msg(
+                            msg, outport, state_manager, verbose=state_manager.verbose
+                        )
+                    _time.sleep(0.001)
         except Exception as e:
             if state_manager.verbose:
                 print(f"[DAW] Errore: {e}")
@@ -362,7 +370,7 @@ def start_daw_listener(state_manager):
                 "[DAW] Errore durante l'ascolto della porta DAW"
             )
 
-    _daw_listener_thread = threading.Thread(target=daw_listener, daemon=True)
+    _daw_listener_thread = threading.Thread(target=daw_listener, daemon=True, name="daw-listener")
     _daw_listener_thread.start()
 
 

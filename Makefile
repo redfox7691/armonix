@@ -19,6 +19,11 @@ deb: clean_deb
 
 	rsync -a --exclude 'build' --exclude '.git' --exclude '*.deb' ./ $(PKG_DIR)/usr/lib/$(PKG_NAME)/
 	rm -rf $(PKG_DIR)/usr/lib/$(PKG_NAME)/build
+	# Config files belong only in /etc/armonix — remove duplicates from the
+	# library directory so users always find a single place to edit.
+	rm -f $(PKG_DIR)/usr/lib/$(PKG_NAME)/armonix.conf
+	rm -f $(PKG_DIR)/usr/lib/$(PKG_NAME)/keypad_config.json
+	rm -f $(PKG_DIR)/usr/lib/$(PKG_NAME)/launchkey_config.json
 
 	install -m755 scripts/armonix $(PKG_DIR)/usr/bin/armonix
 	install -m755 scripts/armonix-engine $(PKG_DIR)/usr/bin/armonix-engine
