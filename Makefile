@@ -16,6 +16,7 @@ deb: clean_deb
 	mkdir -p $(PKG_DIR)/usr/share/man/man1
 	mkdir -p $(PKG_DIR)/usr/share/man/it/man1
 	mkdir -p $(PKG_DIR)/var/lib/$(PKG_NAME)
+	mkdir -p $(PKG_DIR)/etc/polkit-1/rules.d
 
 	rsync -a --exclude 'build' --exclude '.git' --exclude '*.deb' ./ $(PKG_DIR)/usr/lib/$(PKG_NAME)/
 	rm -rf $(PKG_DIR)/usr/lib/$(PKG_NAME)/build
@@ -35,6 +36,7 @@ deb: clean_deb
 	install -m644 keypad_config.json $(PKG_DIR)/usr/share/$(PKG_NAME)/examples/keypad_config.json
 	install -m644 launchkey_config.json $(PKG_DIR)/usr/share/$(PKG_NAME)/examples/launchkey_config.json
 
+	install -m644 packaging/50-armonix.rules $(PKG_DIR)/etc/polkit-1/rules.d/50-armonix.rules
 	install -m644 packaging/armonix.service $(PKG_DIR)/usr/lib/systemd/system/armonix.service
 	install -m644 packaging/armonix-gui.service $(PKG_DIR)/usr/lib/systemd/user/armonix-gui.service
 	gzip -9 -c man/man1/armonix.1 > $(PKG_DIR)/usr/share/man/man1/armonix.1.gz

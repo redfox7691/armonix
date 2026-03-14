@@ -1,0 +1,12 @@
+/* Allow any user to start/stop/restart the armonix system service
+   without authentication. Required for the touchscreen GUI shutdown
+   gesture, where the keyboard is inaccessible. */
+polkit.addRule(function(action, subject) {
+    if (action.id === "org.freedesktop.systemd1.manage-units" &&
+        action.lookup("unit") === "armonix.service" &&
+        (action.lookup("verb") === "start"   ||
+         action.lookup("verb") === "stop"    ||
+         action.lookup("verb") === "restart")) {
+        return polkit.Result.YES;
+    }
+});
