@@ -1,13 +1,14 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 class LedBar(QtWidgets.QWidget):
-    def __init__(self, states_getter):
+    def __init__(self, states_getter, shutdown_callback=None):
         super().__init__()
         self.setWindowFlags(QtCore.Qt.FramelessWindowHint | QtCore.Qt.WindowStaysOnTopHint)
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self.setGeometry(900, 38, 120, 38)
         self.led_letters = ['M', 'E', 'K', 'B', 'X']
         self.states_getter = states_getter
+        self.shutdown_callback = shutdown_callback
         self.state_manager = None  # Da settare se vuoi il click abilitato
         self.show()
         self.timer = QtCore.QTimer()
@@ -57,12 +58,36 @@ class LedBar(QtWidgets.QWidget):
 
     def mousePressEvent(self, event):
         x = event.x()
+        hit_any = any(10 + i * 22 <= x <= 10 + i * 22 + 20 for i in range(5))
+        if not hit_any:
+            return
+
+        # Se Ketron non è connesso: qualsiasi LED apre il dialogo di spegnimento
+        if self.state_manager and self.state_manager.ketron_port is None:
+            self._ask_shutdown()
+            return
+
+        # Ketron connesso: solo il LED X (indice 4) attiva toggle
         led_x_start = 10 + 4 * 22
-        if led_x_start <= x <= led_x_start + 20:
-            if self.state_manager:
-                self.state_manager.toggle_enabled()
-            else:
-                print("LED X cliccato (nessuna funzione collegata)")
+        if led_x_start <= x <= led_x_start + 20 and self.state_manager:
+            self.state_manager.toggle_enabled()
+
+    def _ask_shutdown(self):
+        dlg = QtWidgets.QMessageBox(self)
+        dlg.setWindowTitle("Armonix")
+        dlg.setText("Terminare Armonix?")
+        dlg.setWindowFlags(QtCore.Qt.Dialog | QtCore.Qt.WindowStaysOnTopHint)
+        btn_si = dlg.addButton("SI", QtWidgets.QMessageBox.YesRole)
+        btn_no = dlg.addButton("NO", QtWidgets.QMessageBox.NoRole)  # noqa: F841
+        dlg.setStyleSheet(
+            "QMessageBox { font-size: 18pt; }"
+            "QPushButton { min-width: 90px; min-height: 55px;"
+            "              font-size: 18pt; font-weight: bold;"
+            "              padding: 10px 24px; }"
+        )
+        dlg.exec_()
+        if dlg.clickedButton() is btn_si and self.shutdown_callback:
+            self.shutdown_callback()
 
     def set_state_manager(self, sm):
         self.state_manager = sm

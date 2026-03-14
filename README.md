@@ -71,6 +71,19 @@ the desired files back to `/etc/armonix` and restart the services.  The VNC
 automation formerly provided by `start-touchdesk.sh` is now handled by the
 graphical helper through the `[vnc]` section in `armonix.conf`.
 
+## Touchscreen shutdown
+
+When Armonix is running on a touchscreen device and the Ketron EVM is **not
+connected**, tapping any of the five LED indicators in the graphical bar
+opens a confirmation dialog with two large buttons:
+
+* **SI** — stops the `armonix` system service and closes the GUI.
+* **NO** — dismisses the dialog and continues normally.
+
+This gesture is intentionally disabled when the Ketron EVM is connected:
+tapping the LEDs in that case keeps its existing behaviour (the **X** LED
+toggles the pause state).
+
 ## Manual tests
 
 To verify the Launchkey message filter you can run the manual script:

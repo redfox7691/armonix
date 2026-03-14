@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import subprocess
 import sys
 import time
 from typing import Optional
@@ -183,7 +184,12 @@ def _run_gui_helpers(config, args, logger, vnc_logger, mouse_logger) -> None:
     )
 
     app = QtWidgets.QApplication(sys.argv)
-    led_bar = LedBar(states_getter=state_manager.get_led_states)
+
+    def _shutdown():
+        subprocess.run(["systemctl", "stop", "armonix"], check=False)
+        app.quit()
+
+    led_bar = LedBar(states_getter=state_manager.get_led_states, shutdown_callback=_shutdown)
     state_manager.set_ledbar(led_bar)
     led_bar.set_state_manager(state_manager)
 
