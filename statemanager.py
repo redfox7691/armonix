@@ -251,6 +251,8 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
 
         self.pianoteq_mode = mode
         self.logger.info("Modalità Pianoteq: %s", mode or "off")
+        if hasattr(self.master_module, "update_pianoteq_display"):
+            self.master_module.update_pianoteq_display(mode, self.verbose)
 
     def on_keypad_event(self, scancode, keycode, is_down):
         if not self.midi_io_enabled:

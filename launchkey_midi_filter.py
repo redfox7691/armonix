@@ -109,6 +109,7 @@ _daw_in_port = None
 _daw_out_port = None
 _daw_listener_thread = None
 _daw_listener_stop = None
+_daw_outport_obj = None  # open mido output handle, cached for out-of-band writes
 
 
 def _send_display(outport, line1, line2, verbose=False):
@@ -146,6 +147,27 @@ def show_temp_display(outport, line1, line2, verbose=False):
     _send_display(outport, line1, line2, verbose=verbose)
     _display_timer = threading.Timer(3.0, show_default_display, args=(outport, verbose))
     _display_timer.start()
+
+
+def update_pianoteq_display(mode, verbose=False):
+    """Update the Launchkey default display to reflect the active Pianoteq mode.
+
+    Called by StateManager after set_pianoteq_mode() so the display stays in
+    sync regardless of whether the trigger came from a pad or the keypad.
+    """
+    global _default_lines, _display_timer
+    if mode:
+        line1 = "Pianoteq".center(16)
+        line2 = mode.center(16)
+    else:
+        line1 = "Armonix".center(16)
+        line2 = f"v. {ARMONIX_VERSION}".center(16)
+    _default_lines = (line1[:16], line2[:16])
+    if _display_timer:
+        _display_timer.cancel()
+        _display_timer = None
+    if _daw_outport_obj is not None:
+        _send_display(_daw_outport_obj, *_default_lines, verbose=verbose)
 
 
 _COLOR_STATE = {}
@@ -305,6 +327,8 @@ def start_daw_listener(state_manager):
             with mido.open_input(_daw_in_port) as inport, mido.open_output(
                 _daw_out_port, exclusive=False
             ) as outport:
+                global _daw_outport_obj
+                _daw_outport_obj = outport
                 init_msg = mido.Message("note_on", channel=15, note=0x0C, velocity=0x7F)
                 outport.send(init_msg)
                 if state_manager.verbose:
@@ -373,6 +397,9 @@ def start_daw_listener(state_manager):
             state_manager.logger.exception(
                 "[DAW] Errore durante l'ascolto della porta DAW"
             )
+        finally:
+            global _daw_outport_obj
+            _daw_outport_obj = None
 
     _daw_listener_thread = threading.Thread(target=daw_listener, daemon=True, name="daw-listener")
     _daw_listener_thread.start()
