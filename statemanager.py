@@ -230,7 +230,7 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         if mode == self.pianoteq_mode:
             mode = None  # toggle off
 
-        if mode in ("full", "split"):
+        if mode in ("full", "full-solo", "split", "split-solo"):
             if not self.pianoteq_config or not self.pianoteq_config.enabled:
                 self.logger.warning("Pianoteq non configurato (executable vuoto)")
                 return

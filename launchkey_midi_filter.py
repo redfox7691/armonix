@@ -419,16 +419,32 @@ def filter_and_translate_msg(
     pianoteq_port = getattr(state_manager, "pianoteq_port", None)
 
     if pianoteq_mode and pianoteq_port:
+        split_note = (
+            state_manager.pianoteq_config.split_note
+            if getattr(state_manager, "pianoteq_config", None)
+            else 60
+        )
+        is_note_msg = msg.type in ("note_on", "note_off", "polytouch")
+        note_val = getattr(msg, "note", -1)
+
         if pianoteq_mode == "full":
+            # Tutto a Pianoteq E a Ketron
+            _send_to_pianoteq(msg, pianoteq_port, verbose)
+            ketron_outport.send(msg)
+            return
+        elif pianoteq_mode == "full-solo":
+            # Tutto solo a Pianoteq
             _send_to_pianoteq(msg, pianoteq_port, verbose)
             return
         elif pianoteq_mode == "split":
-            split_note = (
-                state_manager.pianoteq_config.split_note
-                if getattr(state_manager, "pianoteq_config", None)
-                else 60
-            )
-            if msg.type in ("note_on", "note_off", "polytouch") and getattr(msg, "note", -1) >= split_note:
+            # Destra (>= split_note): Pianoteq + Ketron; sinistra: solo Ketron
+            if is_note_msg and note_val >= split_note:
+                _send_to_pianoteq(msg, pianoteq_port, verbose)
+                ketron_outport.send(msg)
+                return
+        elif pianoteq_mode == "split-solo":
+            # Destra (>= split_note): solo Pianoteq; sinistra: solo Ketron
+            if is_note_msg and note_val >= split_note:
                 _send_to_pianoteq(msg, pianoteq_port, verbose)
                 return
 
