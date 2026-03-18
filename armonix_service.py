@@ -99,6 +99,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         ble_port_keyword=config.midi.bluetooth_port_keyword,
         keypad_device=config.keypad_device,
         enable_midi_io=True,
+        pianoteq_config=config.pianoteq,
         parent_logger=logger,
     )
 

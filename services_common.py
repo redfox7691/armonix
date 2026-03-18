@@ -87,6 +87,7 @@ def create_state_manager(
     ble_port_keyword: Optional[str],
     keypad_device: Optional[str],
     enable_midi_io: bool,
+    pianoteq_config=None,
     parent_logger: Optional[logging.Logger] = None,
 ) -> StateManager:
     """Instantiate :class:`StateManager`. / Crea un'istanza di :class:`StateManager`."""
@@ -105,6 +106,7 @@ def create_state_manager(
         ble_port_keyword=ble_port_keyword,
         keypad_device=keypad_device,
         enable_midi_io=enable_midi_io,
+        pianoteq_config=pianoteq_config,
         logger=state_logger,
     )
 

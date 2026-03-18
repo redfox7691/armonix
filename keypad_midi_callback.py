@@ -54,7 +54,7 @@ def _resolve_nrpn_channel(mapping):
     return DEFAULT_NRPN_CHANNEL
 
 
-def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
+def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False, state_manager=None):
     mapping = KEYPAD_CONFIG.get(keycode)
     if not mapping:
         if verbose:
@@ -97,6 +97,20 @@ def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False):
             return
         param = custom["switch_map"]["toggle"] if is_down else custom["switch_map"]["off"]
         sysex_bytes = sysex_custom(custom["format"], param)
+
+    elif cmd_type == "PIANOTEQ":
+        if not is_down:
+            if verbose:
+                logger.debug("Rilascio PIANOTEQ '%s' ignorato", name)
+            return
+        if state_manager is None:
+            logger.warning("PIANOTEQ '%s': state_manager non disponibile", name)
+            return
+        mode = mapping.get("mode")  # "full" o "split"
+        state_manager.set_pianoteq_mode(mode)
+        if verbose:
+            logger.debug("Tasto %s: PIANOTEQ mode=%s", keycode, mode)
+        return
 
     elif cmd_type == "NRPN":
         if not is_down:

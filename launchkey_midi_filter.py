@@ -410,17 +410,65 @@ def filter_and_translate_msg(
             print(f"[LAUNCHKEY-FILTER] Ignorato canale {msg.channel}: {msg}")
         return
 
-    if armonix_enabled:
-        ketron_outport.send(msg)
+    if not armonix_enabled:
         if verbose:
-            print(f"[LAUNCHKEY-FILTER] Inviato inalterato: {msg}")
-    elif verbose:
-        print(f"[LAUNCHKEY-FILTER] Bloccato: {msg}")
+            print(f"[LAUNCHKEY-FILTER] Bloccato: {msg}")
+        return
+
+    pianoteq_mode = getattr(state_manager, "pianoteq_mode", None)
+    pianoteq_port = getattr(state_manager, "pianoteq_port", None)
+
+    if pianoteq_mode and pianoteq_port:
+        if pianoteq_mode == "full":
+            _send_to_pianoteq(msg, pianoteq_port, verbose)
+            return
+        elif pianoteq_mode == "split":
+            split_note = (
+                state_manager.pianoteq_config.split_note
+                if getattr(state_manager, "pianoteq_config", None)
+                else 60
+            )
+            if msg.type in ("note_on", "note_off", "polytouch") and getattr(msg, "note", -1) >= split_note:
+                _send_to_pianoteq(msg, pianoteq_port, verbose)
+                return
+
+    ketron_outport.send(msg)
+    if verbose:
+        print(f"[LAUNCHKEY-FILTER] Inviato inalterato: {msg}")
 
 
 # --- DAW port filter ------------------------------------------------------
 
 _ketron_outport = None
+_pianoteq_outport = None
+_pianoteq_outport_name = None
+
+
+def _send_to_pianoteq(msg, port_name, verbose=False):
+    """Send a MIDI message to Pianoteq, opening the port lazily."""
+    global _pianoteq_outport, _pianoteq_outport_name
+    if _pianoteq_outport is None or _pianoteq_outport_name != port_name:
+        if _pianoteq_outport is not None:
+            try:
+                _pianoteq_outport.close()
+            except Exception:
+                pass
+        try:
+            _pianoteq_outport = mido.open_output(port_name, exclusive=False)
+            _pianoteq_outport_name = port_name
+        except Exception as exc:
+            logger.error("Impossibile aprire porta Pianoteq '%s': %s", port_name, exc)
+            _pianoteq_outport = None
+            _pianoteq_outport_name = None
+            return
+    try:
+        _pianoteq_outport.send(msg)
+        if verbose:
+            print(f"[LAUNCHKEY-FILTER] -> Pianoteq ({port_name}): {msg}")
+    except Exception as exc:
+        logger.error("Errore invio a Pianoteq: %s", exc)
+        _pianoteq_outport = None
+        _pianoteq_outport_name = None
 
 
 def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verbose=False):
@@ -564,6 +612,16 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                     _mouse_release(x, y)
                     if verbose:
                         print(f"[LAUNCHKEY-DAW-FILTER] NOTE -> MOUSE RELEASE {x},{y}")
+            elif rtype == "PIANOTEQ":
+                if is_on:
+                    mode = rule.get("mode")  # "full" o "split"
+                    state_manager.set_pianoteq_mode(mode)
+                    if verbose:
+                        print(f"[LAUNCHKEY-DAW-FILTER] NOTE -> PIANOTEQ mode={mode}")
+                    if not state_manager.disable_realtime_display:
+                        show_temp_display(daw_outport, "Pianoteq", mode or "off", verbose)
+                _handle_pressed_feedback(daw_outport, "NOTE", msg.note, rule, is_on)
+                return
 
             if is_on:
                 group_id = rule.get("group")
@@ -690,6 +748,16 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                     print(
                         f"[LAUNCHKEY-DAW-FILTER] CC duplicato {msg.control}->{rule['newval']}"
                     )
+            elif rtype == "PIANOTEQ":
+                if is_on:
+                    mode = rule.get("mode")  # "full" o "split"
+                    state_manager.set_pianoteq_mode(mode)
+                    if verbose:
+                        print(f"[LAUNCHKEY-DAW-FILTER] CC {msg.control} -> PIANOTEQ mode={mode}")
+                    if not state_manager.disable_realtime_display:
+                        show_temp_display(daw_outport, "Pianoteq", mode or "off", verbose)
+                _handle_pressed_feedback(daw_outport, "CC", msg.control, rule, is_on)
+                return
             _handle_pressed_feedback(daw_outport, "CC", msg.control, rule, is_on)
         elif verbose:
             print(

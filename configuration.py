@@ -31,6 +31,17 @@ def _as_int(value: str, default: int) -> int:
 
 
 @dataclass(frozen=True)
+class PianoteqConfig:
+    executable: str = ""
+    port_keyword: str = "Pianoteq"
+    split_note: int = 60
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.executable)
+
+
+@dataclass(frozen=True)
 class VncConfig:
     command: str = ""
     poll_interval: int = 5
@@ -58,6 +69,7 @@ class ArmonixConfig:
     )
     midi: MidiConfig = dataclasses.field(default_factory=MidiConfig)
     vnc: VncConfig = dataclasses.field(default_factory=VncConfig)
+    pianoteq: PianoteqConfig = dataclasses.field(default_factory=PianoteqConfig)
     source_path: str = get_default_config_path("armonix.conf")
 
 
@@ -91,6 +103,18 @@ def load_config(path: Optional[str] = None) -> ArmonixConfig:
 
     vnc_cmd = parser.get("vnc", "command", fallback="").strip()
     vnc_interval = _as_int(parser.get("vnc", "poll_interval", fallback="5"), 5)
+
+    pianoteq_exec = parser.get("pianoteq", "executable", fallback="").strip()
+    pianoteq_keyword = (
+        parser.get("pianoteq", "port_keyword", fallback="Pianoteq").strip() or "Pianoteq"
+    )
+    pianoteq_split = _as_int(parser.get("pianoteq", "split_note", fallback="60"), 60)
+    pianoteq_cfg = PianoteqConfig(
+        executable=pianoteq_exec,
+        port_keyword=pianoteq_keyword,
+        split_note=pianoteq_split,
+    )
+
     midi_cfg = MidiConfig(
         master_port_keyword=master_keyword,
         ketron_port_keyword=ketron_keyword,
@@ -110,5 +134,6 @@ def load_config(path: Optional[str] = None) -> ArmonixConfig:
         keypad_device=keypad_device,
         midi=midi_cfg,
         vnc=vnc_cfg,
+        pianoteq=pianoteq_cfg,
         source_path=source_path,
     )

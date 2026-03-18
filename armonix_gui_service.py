@@ -180,6 +180,7 @@ def _run_gui_helpers(config, args, logger, vnc_logger, mouse_logger) -> None:
         ble_port_keyword=config.midi.bluetooth_port_keyword,
         keypad_device=config.keypad_device,
         enable_midi_io=False,
+        pianoteq_config=config.pianoteq,
         parent_logger=logger,
     )
 

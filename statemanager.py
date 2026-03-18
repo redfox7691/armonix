@@ -23,6 +23,7 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         ble_port_keyword="Bluetooth",
         keypad_device="/dev/input/by-id/usb-1189_USB_Composite_Device_CD70134330363235-if01-event-kbd",
         enable_midi_io=True,
+        pianoteq_config=None,
         logger=None,
     ):
         super().__init__()
@@ -65,6 +66,11 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         )
         self.keypad_listener = None
         self.keypad_stop_event = threading.Event()
+
+        # Pianoteq
+        self.pianoteq_config = pianoteq_config
+        self.pianoteq_mode = None   # None | "full" | "split"
+        self.pianoteq_port = None   # ALSA output port name for Pianoteq
 
         # Bluetooth MIDI (LED B)
         self.ble_connected = False
@@ -215,6 +221,37 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
                 self.ledbar.update()
 
     # -------- Tastierino USB methods --------
+    def set_pianoteq_mode(self, mode):
+        """Switch Pianoteq routing mode.
+
+        Possible values: ``"full"``, ``"split"``, or ``None`` (off).
+        Calling with the currently active mode toggles it off.
+        """
+        if mode == self.pianoteq_mode:
+            mode = None  # toggle off
+
+        if mode in ("full", "split"):
+            if not self.pianoteq_config or not self.pianoteq_config.enabled:
+                self.logger.warning("Pianoteq non configurato (executable vuoto)")
+                return
+            from pianoteq_manager import ensure_pianoteq_running
+            if not ensure_pianoteq_running(self.pianoteq_config, self.logger):
+                self.logger.error("Pianoteq non disponibile")
+                return
+            port = self.find_output_port(self.pianoteq_config.port_keyword)
+            if not port:
+                self.logger.error(
+                    "Porta MIDI Pianoteq non trovata (keyword=%s)",
+                    self.pianoteq_config.port_keyword,
+                )
+                return
+            self.pianoteq_port = port
+        else:
+            self.pianoteq_port = None
+
+        self.pianoteq_mode = mode
+        self.logger.info("Modalità Pianoteq: %s", mode or "off")
+
     def on_keypad_event(self, scancode, keycode, is_down):
         if not self.midi_io_enabled:
             return
@@ -225,7 +262,7 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         # Qui richiama la tua callback
         from keypad_midi_callback import keypad_midi_callback
         with mido.open_output(self.ketron_port, exclusive=False) as outport:
-            keypad_midi_callback(keycode, is_down, outport, verbose=self.verbose)
+            keypad_midi_callback(keycode, is_down, outport, verbose=self.verbose, state_manager=self)
 
     def start_keypad_listener(self):
         if not self.midi_io_enabled:
