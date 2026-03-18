@@ -149,6 +149,12 @@ def show_temp_display(outport, line1, line2, verbose=False):
     _display_timer.start()
 
 
+def show_temp_pianoteq_display(preset_name, verbose=False):
+    """Mostra il nome del preset per 3 secondi, poi torna alla visualizzazione della modalità."""
+    if _daw_outport_obj is not None:
+        show_temp_display(_daw_outport_obj, "Pianoteq", preset_name[:16], verbose)
+
+
 def update_pianoteq_display(mode, verbose=False):
     """Update the Launchkey default display to reflect the active Pianoteq mode.
 
@@ -657,12 +663,21 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                         print(f"[LAUNCHKEY-DAW-FILTER] NOTE -> MOUSE RELEASE {x},{y}")
             elif rtype == "PIANOTEQ":
                 if is_on:
-                    mode = rule.get("mode")  # "full" o "split"
+                    mode = rule.get("mode")  # "full", "full-solo", "split", "split-solo"
                     state_manager.set_pianoteq_mode(mode)
                     if verbose:
                         print(f"[LAUNCHKEY-DAW-FILTER] NOTE -> PIANOTEQ mode={mode}")
-                    if not state_manager.disable_realtime_display:
-                        show_temp_display(daw_outport, "Pianoteq", mode or "off", verbose)
+                _handle_pressed_feedback(daw_outport, "NOTE", msg.note, rule, is_on)
+                return
+            elif rtype == "PIANOTEQ_PRESET":
+                if is_on:
+                    preset = rule.get("preset")
+                    if preset:
+                        state_manager.load_pianoteq_preset(preset)
+                        if verbose:
+                            print(f"[LAUNCHKEY-DAW-FILTER] NOTE -> PIANOTEQ_PRESET {preset}")
+                    else:
+                        logger.warning("PIANOTEQ_PRESET senza campo 'preset' (nota %s)", msg.note)
                 _handle_pressed_feedback(daw_outport, "NOTE", msg.note, rule, is_on)
                 return
 
@@ -793,12 +808,21 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
                     )
             elif rtype == "PIANOTEQ":
                 if is_on:
-                    mode = rule.get("mode")  # "full" o "split"
+                    mode = rule.get("mode")
                     state_manager.set_pianoteq_mode(mode)
                     if verbose:
                         print(f"[LAUNCHKEY-DAW-FILTER] CC {msg.control} -> PIANOTEQ mode={mode}")
-                    if not state_manager.disable_realtime_display:
-                        show_temp_display(daw_outport, "Pianoteq", mode or "off", verbose)
+                _handle_pressed_feedback(daw_outport, "CC", msg.control, rule, is_on)
+                return
+            elif rtype == "PIANOTEQ_PRESET":
+                if is_on:
+                    preset = rule.get("preset")
+                    if preset:
+                        state_manager.load_pianoteq_preset(preset)
+                        if verbose:
+                            print(f"[LAUNCHKEY-DAW-FILTER] CC {msg.control} -> PIANOTEQ_PRESET {preset}")
+                    else:
+                        logger.warning("PIANOTEQ_PRESET senza campo 'preset' (CC %s)", msg.control)
                 _handle_pressed_feedback(daw_outport, "CC", msg.control, rule, is_on)
                 return
             _handle_pressed_feedback(daw_outport, "CC", msg.control, rule, is_on)

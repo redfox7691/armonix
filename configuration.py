@@ -35,6 +35,7 @@ class PianoteqConfig:
     executable: str = ""
     port_keyword: str = "Pianoteq"
     split_note: int = 60
+    jsonrpc_url: str = "http://127.0.0.1:8081/jsonrpc"
 
     @property
     def enabled(self) -> bool:
@@ -109,10 +110,15 @@ def load_config(path: Optional[str] = None) -> ArmonixConfig:
         parser.get("pianoteq", "port_keyword", fallback="Pianoteq").strip() or "Pianoteq"
     )
     pianoteq_split = _as_int(parser.get("pianoteq", "split_note", fallback="60"), 60)
+    pianoteq_rpc_url = (
+        parser.get("pianoteq", "jsonrpc_url", fallback="http://127.0.0.1:8081/jsonrpc").strip()
+        or "http://127.0.0.1:8081/jsonrpc"
+    )
     pianoteq_cfg = PianoteqConfig(
         executable=pianoteq_exec,
         port_keyword=pianoteq_keyword,
         split_note=pianoteq_split,
+        jsonrpc_url=pianoteq_rpc_url,
     )
 
     midi_cfg = MidiConfig(

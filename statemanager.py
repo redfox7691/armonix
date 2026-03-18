@@ -254,6 +254,21 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         if hasattr(self.master_module, "update_pianoteq_display"):
             self.master_module.update_pianoteq_display(mode, self.verbose)
 
+    def load_pianoteq_preset(self, preset_name):
+        """Carica un preset Pianoteq via JSON-RPC (solo se una modalità Pianoteq è attiva)."""
+        if not self.pianoteq_mode:
+            self.logger.warning("load_pianoteq_preset: nessuna modalità Pianoteq attiva")
+            return
+        url = (
+            self.pianoteq_config.jsonrpc_url
+            if self.pianoteq_config
+            else "http://127.0.0.1:8081/jsonrpc"
+        )
+        from pianoteq_rpc import load_preset
+        ok = load_preset(url, preset_name)
+        if ok and hasattr(self.master_module, "show_temp_pianoteq_display"):
+            self.master_module.show_temp_pianoteq_display(preset_name, self.verbose)
+
     def on_keypad_event(self, scancode, keycode, is_down):
         if not self.midi_io_enabled:
             return

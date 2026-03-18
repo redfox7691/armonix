@@ -106,10 +106,27 @@ def keypad_midi_callback(keycode, is_down, ketron_outport, verbose=False, state_
         if state_manager is None:
             logger.warning("PIANOTEQ '%s': state_manager non disponibile", name)
             return
-        mode = mapping.get("mode")  # "full" o "split"
+        mode = mapping.get("mode")  # "full", "full-solo", "split", "split-solo"
         state_manager.set_pianoteq_mode(mode)
         if verbose:
             logger.debug("Tasto %s: PIANOTEQ mode=%s", keycode, mode)
+        return
+
+    elif cmd_type == "PIANOTEQ_PRESET":
+        if not is_down:
+            if verbose:
+                logger.debug("Rilascio PIANOTEQ_PRESET '%s' ignorato", name)
+            return
+        if state_manager is None:
+            logger.warning("PIANOTEQ_PRESET '%s': state_manager non disponibile", name)
+            return
+        preset = mapping.get("preset")
+        if not preset:
+            logger.warning("PIANOTEQ_PRESET '%s': campo 'preset' mancante", name)
+            return
+        state_manager.load_pianoteq_preset(preset)
+        if verbose:
+            logger.debug("Tasto %s: PIANOTEQ_PRESET preset=%s", keycode, preset)
         return
 
     elif cmd_type == "NRPN":
