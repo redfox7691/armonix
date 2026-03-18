@@ -320,6 +320,7 @@ def start_daw_listener(state_manager):
     _daw_listener_stop = threading.Event()
 
     def daw_listener():
+        global _daw_outport_obj
         # Capture the stop event locally so that a subsequent call to
         # start_daw_listener() (which replaces the module-level
         # _daw_listener_stop with a new Event) cannot accidentally
@@ -333,7 +334,6 @@ def start_daw_listener(state_manager):
             with mido.open_input(_daw_in_port) as inport, mido.open_output(
                 _daw_out_port, exclusive=False
             ) as outport:
-                global _daw_outport_obj
                 _daw_outport_obj = outport
                 init_msg = mido.Message("note_on", channel=15, note=0x0C, velocity=0x7F)
                 outport.send(init_msg)
@@ -404,7 +404,6 @@ def start_daw_listener(state_manager):
                 "[DAW] Errore durante l'ascolto della porta DAW"
             )
         finally:
-            global _daw_outport_obj
             _daw_outport_obj = None
 
     _daw_listener_thread = threading.Thread(target=daw_listener, daemon=True, name="daw-listener")
