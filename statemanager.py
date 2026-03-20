@@ -75,9 +75,10 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         self.pianoteq_mode = None   # None | "full" | "split"
         self.pianoteq_port = None   # ALSA output port name for Pianoteq
 
-        # Pedali seriali
+        # Pedali MIDI
         self.pedals_config = pedals_config
         self.pedals_connected = False
+        self.pedal_port = None
         self.pedal_listener = None
         self.pedal_stop_event = threading.Event()
         self._pedal_ketron_out = None       # porte aperte e cachate per i pedali
@@ -132,19 +133,21 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
                 self.logger.debug("Tastierino USB scollegato")
             self.stop_keypad_listener()
 
-        # Pedali seriali detection + listener
+        # Pedali MIDI detection + listener
         if self.pedals_config and self.pedals_config.enabled:
-            pedals_present = os.path.exists(self.pedals_config.device_path)
-            if pedals_present and not self.pedals_connected:
+            pedal_port = self.find_port(self.pedals_config.port_keyword)
+            if pedal_port and not self.pedals_connected:
                 self.pedals_connected = True
+                self.pedal_port = pedal_port
                 if self.verbose:
-                    self.logger.debug("Pedalino seriale collegato: %s", self.pedals_config.device_path)
+                    self.logger.debug("Pedalino MIDI collegato: %s", pedal_port)
                 if self.midi_io_enabled:
                     self.start_pedal_listener()
-            elif not pedals_present and self.pedals_connected:
+            elif not pedal_port and self.pedals_connected:
                 self.pedals_connected = False
+                self.pedal_port = None
                 if self.verbose:
-                    self.logger.debug("Pedalino seriale scollegato")
+                    self.logger.debug("Pedalino MIDI scollegato")
                 self.stop_pedal_listener()
 
         # Bluetooth MIDI detection + listener
@@ -445,15 +448,14 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         self.pedal_stop_event.clear()
         from pedal_listener import PedalListener
         self.pedal_listener = PedalListener(
-            self.pedals_config.device_path,
-            self.pedals_config.baud_rate,
+            self.pedal_port,
             self.on_pedal_event,
             self.pedal_stop_event,
             verbose=self.verbose,
         )
         self.pedal_listener.start()
         if self.verbose:
-            self.logger.debug("PedalListener avviato su %s.", self.pedals_config.device_path)
+            self.logger.debug("PedalListener avviato su %s.", self.pedal_port)
 
     def stop_pedal_listener(self):
         if self.pedal_listener:

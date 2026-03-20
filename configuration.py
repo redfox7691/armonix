@@ -32,12 +32,11 @@ def _as_int(value: str, default: int) -> int:
 
 @dataclass(frozen=True)
 class PedalsConfig:
-    device_path: str = "/dev/ttyACM0"
-    baud_rate: int = 115200
+    port_keyword: str = "Arduino"
 
     @property
     def enabled(self) -> bool:
-        return bool(self.device_path)
+        return bool(self.port_keyword)
 
 
 @dataclass(frozen=True)
@@ -116,9 +115,8 @@ def load_config(path: Optional[str] = None) -> ArmonixConfig:
     vnc_cmd = parser.get("vnc", "command", fallback="").strip()
     vnc_interval = _as_int(parser.get("vnc", "poll_interval", fallback="5"), 5)
 
-    pedals_device = parser.get("pedals", "device_path", fallback="/dev/ttyACM0").strip()
-    pedals_baud = _as_int(parser.get("pedals", "baud_rate", fallback="115200"), 115200)
-    pedals_cfg = PedalsConfig(device_path=pedals_device, baud_rate=pedals_baud)
+    pedals_keyword = parser.get("pedals", "port_keyword", fallback="Arduino").strip()
+    pedals_cfg = PedalsConfig(port_keyword=pedals_keyword)
 
     pianoteq_exec = parser.get("pianoteq", "executable", fallback="").strip()
     pianoteq_keyword = (

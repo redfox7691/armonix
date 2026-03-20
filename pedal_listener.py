@@ -1,72 +1,57 @@
-"""Listener per il pedalino piano USB collegato via seriale (es. /dev/ttyACM0).
+"""Listener per la pedaliera MIDI (es. Arduino Leonardo MIDI 1).
 
-Il dispositivo invia righe CSV nel formato:  right,center,left
-  right  : 0-127  (pedale destro / sustain, valore continuo)
-  center : 0 o 1  (pedale centrale / sostenuto, binario)
-  left   : 0 o 1  (pedale sinistro / una corda, binario)
+Il dispositivo invia CC standard:
+  CC 64 (sustain)   : 0-127  (pedale destro, valore continuo)
+  CC 66 (sostenuto) : 0 o 127  (pedale centrale, binario)
+  CC 67 (una corda) : 0 o 127  (pedale sinistro, binario)
 """
 
 import logging
 import threading
 
+import mido
+
 logger = logging.getLogger(__name__)
+
+# Mapping CC number → pedal key
+CC_TO_PEDAL = {
+    64: "right",    # sustain
+    66: "center",   # sostenuto
+    67: "left",     # soft / una corda
+}
 
 
 class PedalListener(threading.Thread):
-    """Legge la porta seriale e chiama callback(right, center, left)."""
+    """Ascolta una porta MIDI e chiama callback(pedal_key, value) per CC 64/66/67."""
 
-    def __init__(self, device_path, baud_rate, callback, stop_event, verbose=False):
+    def __init__(self, port_name, callback, stop_event, verbose=False):
         super().__init__(daemon=True, name="pedal-listener")
-        self.device_path = device_path
-        self.baud_rate = baud_rate
+        self.port_name = port_name
         self.callback = callback
         self.stop_event = stop_event
         self.verbose = verbose
-        self._last = {"right": None, "center": None, "left": None}
 
     def run(self):
-        try:
-            import serial
-        except ImportError:
-            logger.error(
-                "Modulo 'serial' non trovato: installare python3-serial per il supporto pedali"
-            )
-            return
-
         while not self.stop_event.is_set():
             try:
-                with serial.Serial(self.device_path, self.baud_rate, timeout=1) as ser:
+                with mido.open_input(self.port_name) as port:
                     if self.verbose:
-                        logger.debug(
-                            "Pedali: connesso a %s a %d baud", self.device_path, self.baud_rate
-                        )
+                        logger.debug("Pedali MIDI: connesso a %s", self.port_name)
                     while not self.stop_event.is_set():
-                        raw = ser.readline()
-                        if not raw:
-                            continue
-                        self._process(raw.decode("ascii", errors="ignore").strip())
+                        for msg in port.iter_pending():
+                            self._process(msg)
+                        self.stop_event.wait(0.005)
             except Exception as exc:
                 if not self.stop_event.is_set():
-                    logger.warning("Pedali: errore seriale (%s), riprovo...", exc)
+                    logger.warning("Pedali MIDI: errore (%s), riprovo...", exc)
                     self.stop_event.wait(2.0)
 
-    def _process(self, line):
-        if not line:
+    def _process(self, msg):
+        if msg.type != "control_change":
             return
-        try:
-            parts = line.split(",")
-            if len(parts) != 3:
-                return
-            values = {
-                "right":  max(0, min(127, int(parts[0].strip()))),
-                "center": 127 if int(parts[1].strip()) else 0,
-                "left":   127 if int(parts[2].strip()) else 0,
-            }
-            for key, val in values.items():
-                if val != self._last[key]:
-                    self._last[key] = val
-                    if self.verbose:
-                        logger.debug("Pedale %s: %d", key, val)
-                    self.callback(key, val)
-        except (ValueError, IndexError):
-            pass  # ignora righe malformate
+        pedal_key = CC_TO_PEDAL.get(msg.control)
+        if pedal_key is None:
+            return
+        if self.verbose:
+            logger.debug("Pedale %s: %d", pedal_key, msg.value)
+        self.callback(pedal_key, msg.value)
