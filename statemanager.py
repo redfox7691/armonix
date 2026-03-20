@@ -282,6 +282,7 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         self.logger.info("Modalità Pianoteq: %s", mode or "off")
         if hasattr(self.master_module, "update_pianoteq_display"):
             self.master_module.update_pianoteq_display(mode, self.verbose)
+        return self.pianoteq_mode
 
     def load_pianoteq_preset(self, preset_name):
         """Carica un preset Pianoteq via JSON-RPC (solo se una modalità Pianoteq è attiva)."""

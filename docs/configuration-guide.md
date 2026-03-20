@@ -104,14 +104,16 @@ Simula un clic del mouse tramite `xdotool` (richiede la GUI).
 Premi per attivare, premi di nuovo per tornare alla modalità solo Ketron (**toggle**).
 
 ```json
-{ "control": 40, "channel": 15, "type": "PIANOTEQ", "mode": "full", "color": 5 }
+{ "control": 40, "channel": 15, "type": "PIANOTEQ", "mode": "full", "color_on": 5, "color_off": 0 }
 ```
 
 | Campo | Valore |
 |-------|--------|
 | `type` | `"PIANOTEQ"` |
 | `mode` | `"full"` / `"full-solo"` / `"split"` / `"split-solo"` |
-| `color` | colore LED (opzionale) |
+| `color_on` | colore LED quando la modalità è **attiva** |
+| `color_off` | colore LED quando è **disattivata** (default: `0` = spento) |
+| `color` | colore fisso alternativo a `color_on` (usato se `color_on` assente) |
 
 **Tabella modalità:**
 

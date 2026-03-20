@@ -663,9 +663,11 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
             elif rtype == "PIANOTEQ":
                 if is_on:
                     mode = rule.get("mode")  # "full", "full-solo", "split", "split-solo"
-                    state_manager.set_pianoteq_mode(mode)
+                    active = state_manager.set_pianoteq_mode(mode)
+                    color = rule.get("color_on", rule.get("color")) if active else rule.get("color_off", 0)
+                    _send_color(daw_outport, "NOTE", msg.note, color, rule.get("colormode", "static"))
                     if verbose:
-                        print(f"[LAUNCHKEY-DAW-FILTER] NOTE -> PIANOTEQ mode={mode}")
+                        print(f"[LAUNCHKEY-DAW-FILTER] NOTE -> PIANOTEQ mode={mode} active={active}")
                 _handle_pressed_feedback(daw_outport, "NOTE", msg.note, rule, is_on)
                 return
             elif rtype == "PIANOTEQ_PRESET":
@@ -808,9 +810,11 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
             elif rtype == "PIANOTEQ":
                 if is_on:
                     mode = rule.get("mode")
-                    state_manager.set_pianoteq_mode(mode)
+                    active = state_manager.set_pianoteq_mode(mode)
+                    color = rule.get("color_on", rule.get("color")) if active else rule.get("color_off", 0)
+                    _send_color(daw_outport, "CC", msg.control, color, rule.get("colormode", "static"))
                     if verbose:
-                        print(f"[LAUNCHKEY-DAW-FILTER] CC {msg.control} -> PIANOTEQ mode={mode}")
+                        print(f"[LAUNCHKEY-DAW-FILTER] CC {msg.control} -> PIANOTEQ mode={mode} active={active}")
                 _handle_pressed_feedback(daw_outport, "CC", msg.control, rule, is_on)
                 return
             elif rtype == "PIANOTEQ_PRESET":
