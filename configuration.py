@@ -31,6 +31,16 @@ def _as_int(value: str, default: int) -> int:
 
 
 @dataclass(frozen=True)
+class PedalsConfig:
+    device_path: str = "/dev/ttyACM0"
+    baud_rate: int = 115200
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.device_path)
+
+
+@dataclass(frozen=True)
 class PianoteqConfig:
     executable: str = ""
     port_keyword: str = "Pianoteq"
@@ -71,6 +81,7 @@ class ArmonixConfig:
     midi: MidiConfig = dataclasses.field(default_factory=MidiConfig)
     vnc: VncConfig = dataclasses.field(default_factory=VncConfig)
     pianoteq: PianoteqConfig = dataclasses.field(default_factory=PianoteqConfig)
+    pedals: PedalsConfig = dataclasses.field(default_factory=PedalsConfig)
     source_path: str = get_default_config_path("armonix.conf")
 
 
@@ -104,6 +115,10 @@ def load_config(path: Optional[str] = None) -> ArmonixConfig:
 
     vnc_cmd = parser.get("vnc", "command", fallback="").strip()
     vnc_interval = _as_int(parser.get("vnc", "poll_interval", fallback="5"), 5)
+
+    pedals_device = parser.get("pedals", "device_path", fallback="/dev/ttyACM0").strip()
+    pedals_baud = _as_int(parser.get("pedals", "baud_rate", fallback="115200"), 115200)
+    pedals_cfg = PedalsConfig(device_path=pedals_device, baud_rate=pedals_baud)
 
     pianoteq_exec = parser.get("pianoteq", "executable", fallback="").strip()
     pianoteq_keyword = (
@@ -141,5 +156,6 @@ def load_config(path: Optional[str] = None) -> ArmonixConfig:
         midi=midi_cfg,
         vnc=vnc_cfg,
         pianoteq=pianoteq_cfg,
+        pedals=pedals_cfg,
         source_path=source_path,
     )

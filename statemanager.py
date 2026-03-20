@@ -24,6 +24,7 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         keypad_device="/dev/input/by-id/usb-1189_USB_Composite_Device_CD70134330363235-if01-event-kbd",
         enable_midi_io=True,
         pianoteq_config=None,
+        pedals_config=None,
         logger=None,
     ):
         super().__init__()
@@ -72,6 +73,16 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         self.pianoteq_mode = None   # None | "full" | "split"
         self.pianoteq_port = None   # ALSA output port name for Pianoteq
 
+        # Pedali seriali
+        self.pedals_config = pedals_config
+        self.pedals_connected = False
+        self.pedal_listener = None
+        self.pedal_stop_event = threading.Event()
+        self._pedal_ketron_out = None       # porte aperte e cachate per i pedali
+        self._pedal_ketron_out_name = None
+        self._pedal_pianoteq_out = None
+        self._pedal_pianoteq_out_name = None
+
         # Bluetooth MIDI (LED B)
         self.ble_connected = False
         self.ble_listener_thread = None
@@ -117,6 +128,21 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
             if self.verbose:
                 self.logger.debug("Tastierino USB scollegato")
             self.stop_keypad_listener()
+
+        # Pedali seriali detection + listener
+        if self.pedals_config and self.pedals_config.enabled:
+            pedals_present = os.path.exists(self.pedals_config.device_path)
+            if pedals_present and not self.pedals_connected:
+                self.pedals_connected = True
+                if self.verbose:
+                    self.logger.debug("Pedalino seriale collegato: %s", self.pedals_config.device_path)
+                if self.midi_io_enabled:
+                    self.start_pedal_listener()
+            elif not pedals_present and self.pedals_connected:
+                self.pedals_connected = False
+                if self.verbose:
+                    self.logger.debug("Pedalino seriale scollegato")
+                self.stop_pedal_listener()
 
         # Bluetooth MIDI detection + listener
         if ble_port and not self.ble_connected:
@@ -303,6 +329,81 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
             self.keypad_listener = None
             if self.verbose:
                 self.logger.debug("KeypadListener terminato.")
+
+    # -------- Pedali seriali methods --------
+
+    def on_pedal_event(self, right, center, left):
+        """Invia i CC dei pedali alle porte attive (Ketron e/o Pianoteq)."""
+        import mido as _mido
+
+        msgs = [
+            _mido.Message("control_change", channel=0, control=64, value=right),   # sustain
+            _mido.Message("control_change", channel=0, control=66, value=center),  # sostenuto
+            _mido.Message("control_change", channel=0, control=67, value=left),    # una corda
+        ]
+
+        # Ketron: sempre, eccetto in modalità full-solo
+        if self.ketron_port and self.pianoteq_mode != "full-solo":
+            if self._pedal_ketron_out_name != self.ketron_port:
+                if self._pedal_ketron_out:
+                    try:
+                        self._pedal_ketron_out.close()
+                    except Exception:
+                        pass
+                try:
+                    self._pedal_ketron_out = _mido.open_output(self.ketron_port, exclusive=False)
+                    self._pedal_ketron_out_name = self.ketron_port
+                except Exception as exc:
+                    self.logger.error("Pedali: impossibile aprire porta Ketron: %s", exc)
+                    self._pedal_ketron_out = None
+                    self._pedal_ketron_out_name = None
+            if self._pedal_ketron_out:
+                for msg in msgs:
+                    self._pedal_ketron_out.send(msg)
+
+        # Pianoteq: se una modalità è attiva
+        if self.pianoteq_port and self.pianoteq_mode:
+            if self._pedal_pianoteq_out_name != self.pianoteq_port:
+                if self._pedal_pianoteq_out:
+                    try:
+                        self._pedal_pianoteq_out.close()
+                    except Exception:
+                        pass
+                try:
+                    self._pedal_pianoteq_out = _mido.open_output(self.pianoteq_port, exclusive=False)
+                    self._pedal_pianoteq_out_name = self.pianoteq_port
+                except Exception as exc:
+                    self.logger.error("Pedali: impossibile aprire porta Pianoteq: %s", exc)
+                    self._pedal_pianoteq_out = None
+                    self._pedal_pianoteq_out_name = None
+            if self._pedal_pianoteq_out:
+                for msg in msgs:
+                    self._pedal_pianoteq_out.send(msg)
+
+    def start_pedal_listener(self):
+        if not self.midi_io_enabled:
+            return
+        if self.pedal_listener and self.pedal_listener.is_alive():
+            return
+        self.pedal_stop_event.clear()
+        from pedal_listener import PedalListener
+        self.pedal_listener = PedalListener(
+            self.pedals_config.device_path,
+            self.pedals_config.baud_rate,
+            self.on_pedal_event,
+            self.pedal_stop_event,
+            verbose=self.verbose,
+        )
+        self.pedal_listener.start()
+        if self.verbose:
+            self.logger.debug("PedalListener avviato su %s.", self.pedals_config.device_path)
+
+    def stop_pedal_listener(self):
+        if self.pedal_listener:
+            self.pedal_stop_event.set()
+            self.pedal_listener = None
+            if self.verbose:
+                self.logger.debug("PedalListener terminato.")
 
     # -------- Bluetooth MIDI methods --------
     def start_ble_listener(self):

@@ -88,6 +88,7 @@ def create_state_manager(
     keypad_device: Optional[str],
     enable_midi_io: bool,
     pianoteq_config=None,
+    pedals_config=None,
     parent_logger: Optional[logging.Logger] = None,
 ) -> StateManager:
     """Instantiate :class:`StateManager`. / Crea un'istanza di :class:`StateManager`."""
@@ -107,6 +108,7 @@ def create_state_manager(
         keypad_device=keypad_device,
         enable_midi_io=enable_midi_io,
         pianoteq_config=pianoteq_config,
+        pedals_config=pedals_config,
         logger=state_logger,
     )
 

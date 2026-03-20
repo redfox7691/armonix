@@ -100,6 +100,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         keypad_device=config.keypad_device,
         enable_midi_io=True,
         pianoteq_config=config.pianoteq,
+        pedals_config=config.pedals,
         parent_logger=logger,
     )
 
