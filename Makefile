@@ -25,6 +25,7 @@ deb: clean_deb
 	rm -f $(PKG_DIR)/usr/lib/$(PKG_NAME)/armonix.conf
 	rm -f $(PKG_DIR)/usr/lib/$(PKG_NAME)/keypad_config.json
 	rm -f $(PKG_DIR)/usr/lib/$(PKG_NAME)/launchkey_config.json
+	rm -f $(PKG_DIR)/usr/lib/$(PKG_NAME)/pedals_config.json
 
 	install -m755 scripts/armonix $(PKG_DIR)/usr/bin/armonix
 	install -m755 scripts/armonix-engine $(PKG_DIR)/usr/bin/armonix-engine
@@ -32,9 +33,11 @@ deb: clean_deb
 	install -m644 armonix.conf $(PKG_DIR)/etc/$(PKG_NAME)/armonix.conf
 	install -m644 keypad_config.json $(PKG_DIR)/etc/$(PKG_NAME)/keypad_config.json
 	install -m644 launchkey_config.json $(PKG_DIR)/etc/$(PKG_NAME)/launchkey_config.json
+	install -m644 pedals_config.json $(PKG_DIR)/etc/$(PKG_NAME)/pedals_config.json
 	install -m644 armonix.conf $(PKG_DIR)/usr/share/$(PKG_NAME)/examples/armonix.conf
 	install -m644 keypad_config.json $(PKG_DIR)/usr/share/$(PKG_NAME)/examples/keypad_config.json
 	install -m644 launchkey_config.json $(PKG_DIR)/usr/share/$(PKG_NAME)/examples/launchkey_config.json
+	install -m644 pedals_config.json $(PKG_DIR)/usr/share/$(PKG_NAME)/examples/pedals_config.json
 
 	install -m644 packaging/50-armonix.rules $(PKG_DIR)/etc/polkit-1/rules.d/50-armonix.rules
 	install -m644 packaging/armonix.service $(PKG_DIR)/usr/lib/systemd/system/armonix.service

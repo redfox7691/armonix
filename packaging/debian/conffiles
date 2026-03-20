@@ -1,3 +1,4 @@
 /etc/armonix/armonix.conf
 /etc/armonix/keypad_config.json
 /etc/armonix/launchkey_config.json
+/etc/armonix/pedals_config.json

@@ -1,0 +1,59 @@
+{
+  // Configurazione messaggi MIDI per il pedalino seriale.
+  // Per ogni pedale (right/center/left) si definisce il messaggio inviato
+  // all'EVM e a Pianoteq separatamente.
+  //
+  // Tipi supportati:
+  //   "CC"          - Control Change standard; "control": numero CC, "channel": canale MIDI (0-based)
+  //   "SYSEX"       - SysEx binario (per pedali on/off); "pressed": [bytes], "released": [bytes]
+  //                   I bytes NON includono F0 e F7 (vengono aggiunti automaticamente)
+  //   "SYSEX_VALUE" - SysEx continuo (per il sustain 0-127); "template": [bytes],
+  //                   il valore del pedale viene aggiunto come ultimo byte
+
+  "right": {
+    // Pedale destro: Sustain (0-127, valore continuo)
+    "name": "Sustain",
+    "evm": {
+      "type": "CC",
+      "channel": 0,
+      "control": 64
+    },
+    "pianoteq": {
+      "type": "CC",
+      "channel": 0,
+      "control": 64
+    }
+  },
+
+  "center": {
+    // Pedale centrale: Sostenuto (on/off)
+    // EVM pedal id 02h: F0 26 79 03 02 xx F7
+    "name": "Sostenuto",
+    "evm": {
+      "type": "SYSEX",
+      "pressed":  [0x26, 0x79, 0x03, 0x02, 0x7F],
+      "released": [0x26, 0x79, 0x03, 0x02, 0x00]
+    },
+    "pianoteq": {
+      "type": "CC",
+      "channel": 0,
+      "control": 66
+    }
+  },
+
+  "left": {
+    // Pedale sinistro: Sordina / Una corda (on/off)
+    // EVM pedal id 01h: F0 26 79 03 01 xx F7
+    "name": "Sordina",
+    "evm": {
+      "type": "SYSEX",
+      "pressed":  [0x26, 0x79, 0x03, 0x01, 0x7F],
+      "released": [0x26, 0x79, 0x03, 0x01, 0x00]
+    },
+    "pianoteq": {
+      "type": "CC",
+      "channel": 0,
+      "control": 67
+    }
+  }
+}

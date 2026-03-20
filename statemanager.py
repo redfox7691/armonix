@@ -1,6 +1,8 @@
+import json
 import logging
 import mido
 import os
+import re
 import threading
 import time
 import importlib
@@ -82,6 +84,7 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         self._pedal_ketron_out_name = None
         self._pedal_pianoteq_out = None
         self._pedal_pianoteq_out_name = None
+        self._pedal_midi_cfg = self._load_pedal_midi_config()
 
         # Bluetooth MIDI (LED B)
         self.ble_connected = False
@@ -332,15 +335,71 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
 
     # -------- Pedali seriali methods --------
 
-    def on_pedal_event(self, right, center, left):
-        """Invia i CC dei pedali alle porte attive (Ketron e/o Pianoteq)."""
-        import mido as _mido
+    def _load_pedal_midi_config(self):
+        """Carica pedals_config.json; ritorna None se non trovato o non valido."""
+        from paths import get_config_path
+        path = get_config_path("pedals_config.json")
+        try:
+            with open(path) as f:
+                raw = f.read()
+            # Rimuovi commenti stile // e # (come nel loader del launchkey)
+            raw = re.sub(r"//.*", "", raw)
+            raw = re.sub(r"#.*", "", raw)
+            return json.loads(raw)
+        except Exception as exc:
+            self.logger.warning("pedals_config.json non trovato o non valido: %s", exc)
+            return None
 
-        msgs = [
-            _mido.Message("control_change", channel=0, control=64, value=right),   # sustain
-            _mido.Message("control_change", channel=0, control=66, value=center),  # sostenuto
-            _mido.Message("control_change", channel=0, control=67, value=left),    # una corda
-        ]
+    def _build_pedal_msgs(self, pedal_key, value, dest):
+        """Costruisce la lista di mido.Message o (dest, bytes) SysEx per un pedale.
+
+        pedal_key : "right" | "center" | "left"
+        value     : 0-127 (right) oppure 0 o 127 (center/left)
+        dest      : "evm" | "pianoteq"
+        Restituisce (midi_messages, sysex_list) dove:
+          midi_messages = lista di mido.Message
+          sysex_list    = lista di liste di byte (senza F0/F7)
+        """
+        midi_msgs = []
+        sysex_list = []
+
+        cfg = (self._pedal_midi_cfg or {}).get(pedal_key, {}).get(dest)
+        if cfg is None:
+            # Fallback hardcoded
+            controls = {"right": 64, "center": 66, "left": 67}
+            midi_msgs.append(mido.Message("control_change", channel=0,
+                                          control=controls[pedal_key], value=value))
+            return midi_msgs, sysex_list
+
+        t = cfg.get("type", "CC")
+        if t == "CC":
+            midi_msgs.append(mido.Message(
+                "control_change",
+                channel=cfg.get("channel", 0),
+                control=cfg.get("control", 0),
+                value=value,
+            ))
+        elif t == "SYSEX":
+            key = "pressed" if value > 0 else "released"
+            data = cfg.get(key)
+            if data is not None:
+                sysex_list.append(data)
+        elif t == "SYSEX_VALUE":
+            template = cfg.get("template", [])
+            sysex_list.append(template + [value])
+
+        return midi_msgs, sysex_list
+
+    def on_pedal_event(self, right, center, left):
+        """Invia i messaggi dei pedali alle porte attive (Ketron e/o Pianoteq)."""
+
+        def _send_to(port_obj, dest):
+            for pedal_key, value in (("right", right), ("center", center), ("left", left)):
+                midi_msgs, sysex_list = self._build_pedal_msgs(pedal_key, value, dest)
+                for msg in midi_msgs:
+                    port_obj.send(msg)
+                for data in sysex_list:
+                    port_obj.send(mido.Message("sysex", data=data))
 
         # Ketron: sempre, eccetto in modalità full-solo
         if self.ketron_port and self.pianoteq_mode != "full-solo":
@@ -351,15 +410,14 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
                     except Exception:
                         pass
                 try:
-                    self._pedal_ketron_out = _mido.open_output(self.ketron_port, exclusive=False)
+                    self._pedal_ketron_out = mido.open_output(self.ketron_port, exclusive=False)
                     self._pedal_ketron_out_name = self.ketron_port
                 except Exception as exc:
                     self.logger.error("Pedali: impossibile aprire porta Ketron: %s", exc)
                     self._pedal_ketron_out = None
                     self._pedal_ketron_out_name = None
             if self._pedal_ketron_out:
-                for msg in msgs:
-                    self._pedal_ketron_out.send(msg)
+                _send_to(self._pedal_ketron_out, "evm")
 
         # Pianoteq: se una modalità è attiva
         if self.pianoteq_port and self.pianoteq_mode:
@@ -370,15 +428,14 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
                     except Exception:
                         pass
                 try:
-                    self._pedal_pianoteq_out = _mido.open_output(self.pianoteq_port, exclusive=False)
+                    self._pedal_pianoteq_out = mido.open_output(self.pianoteq_port, exclusive=False)
                     self._pedal_pianoteq_out_name = self.pianoteq_port
                 except Exception as exc:
                     self.logger.error("Pedali: impossibile aprire porta Pianoteq: %s", exc)
                     self._pedal_pianoteq_out = None
                     self._pedal_pianoteq_out_name = None
             if self._pedal_pianoteq_out:
-                for msg in msgs:
-                    self._pedal_pianoteq_out.send(msg)
+                _send_to(self._pedal_pianoteq_out, "pianoteq")
 
     def start_pedal_listener(self):
         if not self.midi_io_enabled:
