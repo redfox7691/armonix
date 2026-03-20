@@ -390,16 +390,15 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
 
         return midi_msgs, sysex_list
 
-    def on_pedal_event(self, right, center, left):
-        """Invia i messaggi dei pedali alle porte attive (Ketron e/o Pianoteq)."""
+    def on_pedal_event(self, pedal_key, value):
+        """Invia il messaggio del singolo pedale cambiato alle porte attive."""
 
         def _send_to(port_obj, dest):
-            for pedal_key, value in (("right", right), ("center", center), ("left", left)):
-                midi_msgs, sysex_list = self._build_pedal_msgs(pedal_key, value, dest)
-                for msg in midi_msgs:
-                    port_obj.send(msg)
-                for data in sysex_list:
-                    port_obj.send(mido.Message("sysex", data=data))
+            midi_msgs, sysex_list = self._build_pedal_msgs(pedal_key, value, dest)
+            for msg in midi_msgs:
+                port_obj.send(msg)
+            for data in sysex_list:
+                port_obj.send(mido.Message("sysex", data=data))
 
         # Ketron: sempre, eccetto in modalità full-solo
         if self.ketron_port and self.pianoteq_mode != "full-solo":
