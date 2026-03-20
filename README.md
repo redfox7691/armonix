@@ -12,6 +12,10 @@ other environments with minimal effort.
 * **Roland Fantom 07** (also works with models 06 and 08)
 * **Novation Launchkey [MK3]** (tested with the 88 key model)
 * USB keypad with 12 keys and 2 encoders
+* **DIY piano pedal unit** — Studiologic VFP3-10 pedalboard wired to an
+  Arduino Pro Micro (ATmega32U4), connected via USB serial (`/dev/ttyACM0`).
+  Provides sustain (CC 64, continuous 0–127), sostenuto (CC 66) and
+  soft/una corda (CC 67) pedals to both the Ketron EVM and Pianoteq.
 * Linux laptop with touchscreen and VNC server for the Ketron console
 * iPad connected via **MIDI over BLE** to display sheet music
 
@@ -70,6 +74,64 @@ Configuration defaults are always available under
 the desired files back to `/etc/armonix` and restart the services.  The VNC
 automation formerly provided by `start-touchdesk.sh` is now handled by the
 graphical helper through the `[vnc]` section in `armonix.conf`.
+
+## Pianoteq integration
+
+Armonix can route MIDI notes to [Pianoteq](https://www.modartt.com/pianoteq)
+in parallel with or instead of the Ketron EVM.  Four routing modes are
+available and can be assigned to any Launchkey pad or keypad key
+(`"type": "PIANOTEQ"`, `"mode": "..."` in the relevant JSON config):
+
+| Mode | Right hand (≥ split note) | Left hand (< split note) |
+|---|---|---|
+| `full` | Pianoteq + Ketron | Pianoteq + Ketron |
+| `full-solo` | Pianoteq only | Pianoteq only |
+| `split` | Pianoteq + Ketron | Ketron only |
+| `split-solo` | Pianoteq only | Ketron only |
+
+Pressing the same mode button again toggles it off and restores normal
+Ketron-only routing.  The Launchkey LCD always reflects the active mode.
+
+Pianoteq is launched automatically (headless, with JSON-RPC enabled) if
+the configured executable is found and the MIDI port is not yet open.
+Individual instruments can be selected at runtime with
+`"type": "PIANOTEQ_PRESET"`, `"preset": "<exact preset name>"`.
+
+Configure the integration in `armonix.conf` under `[pianoteq]`:
+
+```ini
+[pianoteq]
+executable  = /home/user/Pianoteq 9/x86-64bit/Pianoteq 9
+port_keyword = Pianoteq
+split_note  = 60
+jsonrpc_url = http://127.0.0.1:8081/jsonrpc
+```
+
+## Piano pedal unit (DIY)
+
+Armonix supports a custom three-pedal unit built from a
+**Studiologic VFP3-10** pedalboard connected to an
+**Arduino Pro Micro (ATmega32U4)** via USB serial (`/dev/ttyACM0`).
+
+The Arduino firmware sends one CSV line per event in the format
+`right,center,left` where:
+
+* **right** — sustain pedal (CC 64), continuous value 0–127
+* **center** — sostenuto pedal (CC 66), binary: 0 or 1
+* **left** — soft / una corda pedal (CC 67), binary: 0 or 1
+
+Pedal CC messages are routed to the Ketron EVM, to Pianoteq, or to both,
+depending on the active Pianoteq routing mode (only `full-solo` suppresses
+the Ketron output).  The device is detected and started automatically at
+runtime; it can be unplugged and reconnected without restarting the service.
+
+Configure the device path and baud rate in `armonix.conf`:
+
+```ini
+[pedals]
+device_path = /dev/ttyACM0
+baud_rate   = 115200
+```
 
 ## Touchscreen shutdown
 

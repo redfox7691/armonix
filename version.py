@@ -1,3 +1,3 @@
 """Armonix package version metadata."""
 
-__version__ = "2.01"
+__version__ = "2.1.0"
