@@ -124,6 +124,8 @@ Pedal messages are routed to the Ketron EVM, to Pianoteq, or to both,
 depending on the active Pianoteq routing mode (only `full-solo` suppresses
 the Ketron output).  The device is detected and started automatically at
 runtime; it can be unplugged and reconnected without restarting the service.
+Only pedals whose value actually changes generate a MIDI message — no
+flooding from constant polling.
 
 Configure the device path and baud rate in `armonix.conf`:
 
