@@ -149,17 +149,20 @@ types are supported:
 
 Default configuration (matching the Ketron EVM SysEx protocol):
 
+SysEx byte arrays must use **decimal** values (JSON does not support hex
+literals): `0x26` → `38`, `0x79` → `121`, `0x7F` → `127`, etc.
+
 ```json
 {
   "right":  { "evm": { "type": "CC",    "control": 64 },
               "pianoteq": { "type": "CC", "control": 64 } },
   "center": { "evm": { "type": "SYSEX",
-                        "pressed":  [0x26, 0x79, 0x03, 0x02, 0x7F],
-                        "released": [0x26, 0x79, 0x03, 0x02, 0x00] },
+                        "pressed":  [38, 121, 3, 2, 127],
+                        "released": [38, 121, 3, 2, 0] },
               "pianoteq": { "type": "CC", "control": 66 } },
   "left":   { "evm": { "type": "SYSEX",
-                        "pressed":  [0x26, 0x79, 0x03, 0x01, 0x7F],
-                        "released": [0x26, 0x79, 0x03, 0x01, 0x00] },
+                        "pressed":  [38, 121, 3, 1, 127],
+                        "released": [38, 121, 3, 1, 0] },
               "pianoteq": { "type": "CC", "control": 67 } }
 }
 ```
