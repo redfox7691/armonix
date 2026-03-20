@@ -22,6 +22,7 @@ class PedalListener(threading.Thread):
         self.callback = callback
         self.stop_event = stop_event
         self.verbose = verbose
+        self._last = (None, None, None)  # ultimo stato inviato
 
     def run(self):
         try:
@@ -59,6 +60,10 @@ class PedalListener(threading.Thread):
             right  = max(0, min(127, int(parts[0].strip())))
             center = 127 if int(parts[1].strip()) else 0
             left   = 127 if int(parts[2].strip()) else 0
+            state = (right, center, left)
+            if state == self._last:
+                return  # nessuna variazione, non inviare nulla
+            self._last = state
             if self.verbose:
                 logger.debug("Pedali: sustain=%d sostenuto=%d soft=%d", right, center, left)
             self.callback(right, center, left)
