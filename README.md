@@ -116,11 +116,11 @@ Armonix supports a custom three-pedal unit built from a
 The Arduino firmware sends one CSV line per event in the format
 `right,center,left` where:
 
-* **right** — sustain pedal (CC 64), continuous value 0–127
-* **center** — sostenuto pedal (CC 66), binary: 0 or 1
-* **left** — soft / una corda pedal (CC 67), binary: 0 or 1
+* **right** — sustain pedal, continuous value 0–127
+* **center** — sostenuto pedal, binary: 0 or 1
+* **left** — soft / una corda (sordina) pedal, binary: 0 or 1
 
-Pedal CC messages are routed to the Ketron EVM, to Pianoteq, or to both,
+Pedal messages are routed to the Ketron EVM, to Pianoteq, or to both,
 depending on the active Pianoteq routing mode (only `full-solo` suppresses
 the Ketron output).  The device is detected and started automatically at
 runtime; it can be unplugged and reconnected without restarting the service.
@@ -131,6 +131,35 @@ Configure the device path and baud rate in `armonix.conf`:
 [pedals]
 device_path = /dev/ttyACM0
 baud_rate   = 115200
+```
+
+### Pedal MIDI message configuration
+
+The MIDI message sent for each pedal and each destination (EVM / Pianoteq)
+is fully configurable in `/etc/armonix/pedals_config.json`.  Three message
+types are supported:
+
+| Type | Description |
+|---|---|
+| `CC` | Standard Control Change — `channel` + `control` number |
+| `SYSEX` | Binary on/off SysEx — separate `pressed` and `released` byte arrays (without `F0`/`F7`) |
+| `SYSEX_VALUE` | Continuous SysEx — `template` byte array with the pedal value appended as the last byte |
+
+Default configuration (matching the Ketron EVM SysEx protocol):
+
+```json
+{
+  "right":  { "evm": { "type": "CC",    "control": 64 },
+              "pianoteq": { "type": "CC", "control": 64 } },
+  "center": { "evm": { "type": "SYSEX",
+                        "pressed":  [0x26, 0x79, 0x03, 0x02, 0x7F],
+                        "released": [0x26, 0x79, 0x03, 0x02, 0x00] },
+              "pianoteq": { "type": "CC", "control": 66 } },
+  "left":   { "evm": { "type": "SYSEX",
+                        "pressed":  [0x26, 0x79, 0x03, 0x01, 0x7F],
+                        "released": [0x26, 0x79, 0x03, 0x01, 0x00] },
+              "pianoteq": { "type": "CC", "control": 67 } }
+}
 ```
 
 ## Touchscreen shutdown
