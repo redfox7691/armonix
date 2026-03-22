@@ -179,7 +179,7 @@ def _run_gui_helpers(config, args, logger, vnc_logger, mouse_logger) -> None:
         ketron_port_keyword=config.midi.ketron_port_keyword,
         ble_port_keyword=config.midi.bluetooth_port_keyword,
         keypad_device=config.keypad_device,
-        enable_midi_io=False,
+        enable_midi_io=True,
         pianoteq_config=config.pianoteq,
         pedals_config=config.pedals,
         parent_logger=logger,
@@ -188,7 +188,7 @@ def _run_gui_helpers(config, args, logger, vnc_logger, mouse_logger) -> None:
     app = QtWidgets.QApplication(sys.argv)
 
     def _shutdown():
-        subprocess.run(["systemctl", "stop", "armonix"], check=False)
+        subprocess.run(["systemctl", "--user", "stop", "armonix-gui"], check=False)
         app.quit()
 
     led_bar = LedBar(states_getter=state_manager.get_led_states, shutdown_callback=_shutdown)
