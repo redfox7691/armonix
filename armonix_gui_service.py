@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import subprocess
 import sys
 import time
 from typing import Optional
@@ -188,10 +187,10 @@ def _run_gui_helpers(config, args, logger, vnc_logger, mouse_logger) -> None:
     app = QtWidgets.QApplication(sys.argv)
 
     def _shutdown():
-        # Avvia lo stop del servizio in background e poi esce subito.
-        # Non usare subprocess.run (bloccante): manderebbe SIGTERM a questo
-        # stesso processo e si bloccherebbe in attesa che uscisse.
-        subprocess.Popen(["systemctl", "--user", "stop", "armonix-gui"])
+        # Esce dall'event loop Qt: app.exec_() ritorna, il blocco finally
+        # si occupa di fermare VNC e gli altri servizi.
+        # Non usare systemctl stop: SIGTERM arriverebbe prima che il finally
+        # completi, lasciando VNC attivo.
         app.quit()
 
     led_bar = LedBar(states_getter=state_manager.get_led_states, shutdown_callback=_shutdown)
