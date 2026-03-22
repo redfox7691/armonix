@@ -72,8 +72,7 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
 
         # Pianoteq
         self.pianoteq_config = pianoteq_config
-        self.pianoteq_mode = None   # None | "full" | "split"
-        self.pianoteq_port = None   # ALSA output port name for Pianoteq
+        self.pianoteq_mode = None   # None | "full" | "full-solo" | "split" | "split-solo"
 
         # Pedali MIDI
         self.pedals_config = pedals_config
@@ -83,8 +82,6 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         self.pedal_stop_event = threading.Event()
         self._pedal_ketron_out = None       # porte aperte e cachate per i pedali
         self._pedal_ketron_out_name = None
-        self._pedal_pianoteq_out = None
-        self._pedal_pianoteq_out_name = None
         self._pedal_midi_cfg = self._load_pedal_midi_config()
 
         # Bluetooth MIDI (LED B)
@@ -263,23 +260,15 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
             mode = None  # toggle off
 
         if mode in ("full", "full-solo", "split", "split-solo"):
-            if not self.pianoteq_config or not self.pianoteq_config.enabled:
-                self.logger.warning("Pianoteq non configurato (executable vuoto)")
-                return
-            from pianoteq_manager import ensure_pianoteq_running
-            if not ensure_pianoteq_running(self.pianoteq_config, self.logger):
-                self.logger.error("Pianoteq non disponibile")
-                return
-            port = self.find_output_port(self.pianoteq_config.port_keyword)
-            if not port:
-                self.logger.error(
-                    "Porta MIDI Pianoteq non trovata (keyword=%s)",
-                    self.pianoteq_config.port_keyword,
-                )
-                return
-            self.pianoteq_port = port
-        else:
-            self.pianoteq_port = None
+            # Avvia Pianoteq se è configurato l'eseguibile (best-effort).
+            # Se Pianoteq è già in esecuzione o gestito manualmente, si
+            # connette da solo alla porta virtuale "Armonix".
+            if self.pianoteq_config and self.pianoteq_config.enabled:
+                from pianoteq_manager import ensure_pianoteq_running
+                if not ensure_pianoteq_running(self.pianoteq_config, self.logger):
+                    self.logger.warning(
+                        "Pianoteq non raggiungibile — attiva la modalità comunque"
+                    )
 
         self.pianoteq_mode = mode
         self.logger.info("Modalità Pianoteq: %s", mode or "off")
@@ -422,23 +411,11 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
             if self._pedal_ketron_out:
                 _send_to(self._pedal_ketron_out, "evm")
 
-        # Pianoteq: se una modalità è attiva
-        if self.pianoteq_port and self.pianoteq_mode:
-            if self._pedal_pianoteq_out_name != self.pianoteq_port:
-                if self._pedal_pianoteq_out:
-                    try:
-                        self._pedal_pianoteq_out.close()
-                    except Exception:
-                        pass
-                try:
-                    self._pedal_pianoteq_out = mido.open_output(self.pianoteq_port, exclusive=False)
-                    self._pedal_pianoteq_out_name = self.pianoteq_port
-                except Exception as exc:
-                    self.logger.error("Pedali: impossibile aprire porta Pianoteq: %s", exc)
-                    self._pedal_pianoteq_out = None
-                    self._pedal_pianoteq_out_name = None
-            if self._pedal_pianoteq_out:
-                _send_to(self._pedal_pianoteq_out, "pianoteq")
+        # Pianoteq: se una modalità è attiva, usa la porta virtuale "Armonix"
+        if self.pianoteq_mode and hasattr(self.master_module, "get_pianoteq_virtual_out"):
+            vport = self.master_module.get_pianoteq_virtual_out()
+            if vport:
+                _send_to(vport, "pianoteq")
 
     def start_pedal_listener(self):
         if not self.midi_io_enabled:

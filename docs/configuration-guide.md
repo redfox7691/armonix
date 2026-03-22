@@ -178,22 +178,28 @@ jsonrpc_url  = http://127.0.0.1:8081/jsonrpc
 | `split_note` | Nota di separazione mano sx/dx in modalità `split` (numero MIDI, es. 60 = C4). |
 | `jsonrpc_url` | URL del server JSON-RPC di Pianoteq per la selezione dei preset. |
 
-### Configurazione MIDI di Pianoteq
+### Porta MIDI virtuale "Armonix"
 
-Pianoteq di default si connette automaticamente a tutti i dispositivi MIDI trovati,
-inclusa la Launchkey. Questo bypassa il routing di Armonix e causa problemi:
-le note arrivano a Pianoteq **anche quando non dovrebbero** (modalità Ketron-only).
+Quando viene attivata una modalità Pianoteq, Armonix crea automaticamente
+una porta MIDI virtuale chiamata **Armonix**.  Tutti i messaggi destinati a
+Pianoteq (note, CC pedali) vengono inviati su questa porta.
 
-**Soluzione: disabilita l'auto-connect in Pianoteq.**
+**Vantaggi rispetto alla connessione diretta:**
+- Le note arrivano a Pianoteq **solo** quando la modalità è attiva
+- I pedali vengono instradati correttamente (EVM o Pianoteq o entrambi)
+- Nessuna interferenza da PipeWire/WirePlumber che auto-connette i dispositivi
 
-1. Avvia Pianoteq con la GUI (senza `--headless`)
-2. Vai in **Edit → MIDI Settings** (o **Preferenze → MIDI**)
-3. Nella lista dei dispositivi di input, **deseleziona** la Launchkey
-4. Lascia attivo solo il dispositivo che Armonix usa come porta virtuale,
-   oppure lascia tutto deselezionato se Armonix gestisce direttamente la porta ALSA
+**Configurazione una-tantum in Pianoteq:**
 
-Una volta salvata la configurazione, Pianoteq ricorderà questa impostazione
-anche avviandolo in modalità `--headless`.
+1. Avvia Armonix e attiva una modalità Pianoteq (per creare la porta)
+2. Avvia Pianoteq con la GUI (senza `--headless`)
+3. Vai in **Edit → MIDI Settings**
+4. Nella lista dei dispositivi di **input**, seleziona **Armonix** e
+   deseleziona tutti gli altri (Launchkey, Fantom, ecc.)
+5. Salva — Pianoteq ricorderà la scelta anche in modalità `--headless`
+
+La porta "Armonix" è sempre visibile in `aconnect -l` dopo il primo
+utilizzo di una modalità Pianoteq.
 
 ### Avvio automatico vs avvio manuale
 

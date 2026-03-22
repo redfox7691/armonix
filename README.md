@@ -36,7 +36,7 @@ I file di configurazione vengono cercati nell'ordine:
 
 ```bash
 make deb
-sudo dpkg -i build/deb/armonix_3.0.2.deb
+sudo dpkg -i build/deb/armonix_3.0.3.deb
 ```
 
 Il pacchetto installa i moduli Python in `/usr/lib/armonix/`, i default di
@@ -168,6 +168,65 @@ Il messaggio inviato per ogni pedale e ogni destinazione (EVM / Pianoteq)
               "pianoteq": { "type": "CC", "control": 67 } }
 }
 ```
+
+## Porta MIDI virtuale "Armonix"
+
+Quando una modalità Pianoteq è attiva, Armonix crea automaticamente una porta
+MIDI virtuale chiamata **Armonix** (visibile in `aconnect -l`).  Pianoteq deve
+essere configurato per connettersi a questa porta invece di connettersi
+direttamente alla tastiera master.
+
+**Configurazione una-tantum in Pianoteq:**
+
+1. Avvia Pianoteq con la GUI (senza `--headless`)
+2. Vai in **Edit → MIDI Settings**
+3. Nella lista dei dispositivi di **input**, seleziona **Armonix** e deseleziona
+   tutti gli altri (in particolare la Launchkey/Fantom)
+4. Salva — Pianoteq ricorderà la scelta anche in modalità headless
+
+In questo modo le note arrivano a Pianoteq **solo** quando Armonix attiva la
+modalità di routing, e i pedali vengono instradati correttamente.
+
+## Avvio automatico all'accensione
+
+Armonix gira come **servizio utente systemd** e si avvia automaticamente dopo
+il login grafico.  Su macchine senza tastiera (touchscreen, kiosk) è necessario
+abilitare il **login automatico** nel display manager.
+
+### LightDM (Linux Mint / Ubuntu)
+
+```bash
+sudo nano /etc/lightdm/lightdm.conf
+```
+
+Aggiungere o modificare nella sezione `[Seat:*]`:
+
+```ini
+[Seat:*]
+autologin-user=b0
+autologin-user-timeout=0
+```
+
+Poi riavviare:
+
+```bash
+sudo systemctl restart lightdm
+```
+
+### GDM (Ubuntu con GNOME)
+
+```bash
+sudo nano /etc/gdm3/custom.conf
+```
+
+```ini
+[daemon]
+AutomaticLoginEnable=true
+AutomaticLogin=b0
+```
+
+Una volta effettuato l'autologin, systemd avvierà automaticamente
+`armonix-gui.service` e tutti i servizi con `WantedBy=graphical-session.target`.
 
 ## Shutdown da touchscreen
 
