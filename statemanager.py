@@ -73,6 +73,10 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         # Pianoteq
         self.pianoteq_config = pianoteq_config
         self.pianoteq_mode = None   # None | "full" | "full-solo" | "split" | "split-solo"
+        # Apri subito la porta virtuale "Armonix" così altri software la vedono
+        # anche prima che una modalità Pianoteq venga attivata.
+        if hasattr(self.master_module, "get_pianoteq_virtual_out"):
+            self.master_module.get_pianoteq_virtual_out()
 
         # Pedali MIDI
         self.pedals_config = pedals_config
