@@ -1,160 +1,162 @@
 # Armonix
 
-Armonix is a compact MIDI control system designed to drive a Ketron EVM
-using a MIDI keyboard and a small USB keypad.  Drivers are currently
-available for the Roland Fantom 07 and the Novation Launchkey 88 [MK3].
-The project has been tested on Linux Mint 21/24 but can be adapted to
-other environments with minimal effort.
+Armonix è un sistema di controllo MIDI compatto progettato per pilotare un
+Ketron EVM tramite una tastiera MIDI e un piccolo tastierino USB.  I driver
+sono disponibili per il Roland Fantom 07 e il Novation Launchkey 88 [MK3].
+Il progetto è stato testato su Linux Mint 21/24.
 
-## Recommended hardware
+## Hardware consigliato
 
 * **Ketron EVM**
-* **Roland Fantom 07** (also works with models 06 and 08)
-* **Novation Launchkey [MK3]** (tested with the 88 key model)
-* USB keypad with 12 keys and 2 encoders
-* **DIY piano pedal unit** — Studiologic VFP3-10 pedalboard wired to an
-  Arduino Pro Micro (ATmega32U4), connected via USB serial (`/dev/ttyACM0`).
-  Provides sustain (CC 64, continuous 0–127), sostenuto (CC 66) and
-  soft/una corda (CC 67) pedals to both the Ketron EVM and Pianoteq.
-* Linux laptop with touchscreen and VNC server for the Ketron console
-* iPad connected via **MIDI over BLE** to display sheet music
+* **Roland Fantom 07** (compatibile anche con i modelli 06 e 08)
+* **Novation Launchkey [MK3]** (testato con il modello a 88 tasti)
+* Tastierino USB con 12 tasti e 2 encoder
+* **Pedaliera MIDI DIY** — Studiologic VFP3-10 collegata a un Arduino Leonardo
+  (ATmega32U4) via USB.  Invia sustain (CC 64, continuo 0–127), sostenuto
+  (CC 66) e sordina/una corda (CC 67) al Ketron EVM e a Pianoteq.
+* Laptop Linux con touchscreen e server VNC per la console Ketron
+* iPad collegato via **MIDI over BLE** per la visualizzazione dello spartito
 
-## Installation
+## Architettura
 
-1. Install Python 3 and create a virtual environment:
+Armonix gira come **servizio utente systemd** (`systemctl --user`), sotto
+lo stesso utente della sessione grafica.  Questo permette di accedere
+al display, lanciare Pianoteq, client VNC e qualsiasi altro software
+audio/MIDI senza vincoli di permessi.
 
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
+I file di configurazione vengono cercati nell'ordine:
 
-2. Install the main dependencies:
+| Priorità | Percorso | Uso |
+|----------|----------|-----|
+| 1 | `~/.config/armonix/` | Override personali (più alta priorità) |
+| 2 | `/etc/armonix/` | Default installati dal pacchetto |
+| 3 | `/usr/lib/armonix/` | Fallback sorgente |
 
-   ```bash
-   pip install mido python-rtmidi evdev
-   # Facoltativo per la barra LED grafica:
-   pip install PyQt5
-   ```
-
-## Running
-
-The core MIDI engine is provided by `armonix_service.py`, which runs
-without any graphical dependencies.  Start it with:
-
-```bash
-python armonix_service.py --verbose
-```
-
-The optional graphical helper (`armonix_gui_service.py`) can be launched
-after logging in to display the LED bar and, when requested, to run the
-configured VNC command:
-
-```bash
-python armonix_gui_service.py --gui
-```
-
-## Debian package and system service
-
-The project ships with a packaging recipe that builds a Debian package for
-Raspberry Pi and Debian/Ubuntu systems:
+## Installazione dal pacchetto Debian
 
 ```bash
 make deb
+sudo dpkg -i build/deb/armonix_3.0.0.deb
 ```
 
-The command produces `build/deb/armonix_0.99.90a.deb`.  The package installs
-Armonix under `/usr/lib/armonix`, deploys configuration files in
-`/etc/armonix` and registers a `systemd` service (`armonix.service`) that
-starts the MIDI engine at boot as the dedicated user `armonix`.  A user
-service (`armonix-gui.service`) is also installed and runs the graphical
-helper after a graphical login.
+Il pacchetto installa i moduli Python in `/usr/lib/armonix/`, i default di
+configurazione in `/etc/armonix/` e abilita automaticamente il servizio utente
+`armonix-gui.service` per l'utente corrente.
 
-Configuration defaults are always available under
-`/usr/share/armonix/examples`.  To restore the factory settings simply copy
-the desired files back to `/etc/armonix` and restart the services.  The VNC
-automation formerly provided by `start-touchdesk.sh` is now handled by the
-graphical helper through the `[vnc]` section in `armonix.conf`.
+Per personalizzare la configurazione senza toccare i file di sistema:
 
-## Pianoteq integration
+```bash
+mkdir -p ~/.config/armonix
+cp /etc/armonix/armonix.conf ~/.config/armonix/
+# modifica ~/.config/armonix/armonix.conf
+```
 
-Armonix can route MIDI notes to [Pianoteq](https://www.modartt.com/pianoteq)
-in parallel with or instead of the Ketron EVM.  Four routing modes are
-available and can be assigned to any Launchkey pad or keypad key
-(`"type": "PIANOTEQ"`, `"mode": "..."` in the relevant JSON config):
+### Gestione del servizio
 
-| Mode | Right hand (≥ split note) | Left hand (< split note) |
-|---|---|---|
+```bash
+systemctl --user status armonix-gui
+systemctl --user restart armonix-gui
+systemctl --user stop armonix-gui
+systemctl --user start armonix-gui
+
+# Log in tempo reale:
+journalctl --user -u armonix-gui -f
+```
+
+## Sviluppo (senza pacchetto)
+
+```bash
+# Prima volta: crea il virtualenv
+python3 -m venv venv && source venv/bin/activate
+pip install mido python-rtmidi evdev PyQt5
+
+# Avvia il motore headless
+python armonix_service.py --verbose
+
+# Avvia con barra LED grafica
+python armonix_gui_service.py --gui --verbose
+
+# Flag principali
+--master [fantom|launchkey]
+--config <percorso>
+--disable_realtime_display / --enable_realtime_display
+```
+
+I file di configurazione nella directory sorgente hanno precedenza sui file
+di sistema durante lo sviluppo.
+
+## Configurazione
+
+Vedere `docs/configuration-guide.md` per la documentazione completa di tutti
+i file di configurazione.
+
+## Integrazione Pianoteq
+
+Armonix può instradare le note MIDI verso [Pianoteq](https://www.modartt.com/pianoteq)
+in parallelo o in sostituzione del Ketron EVM.  Quattro modalità di routing:
+
+| Modalità | Mano destra (≥ split note) | Mano sinistra (< split note) |
+|----------|---------------------------|------------------------------|
 | `full` | Pianoteq + Ketron | Pianoteq + Ketron |
-| `full-solo` | Pianoteq only | Pianoteq only |
-| `split` | Pianoteq + Ketron | Ketron only |
-| `split-solo` | Pianoteq only | Ketron only |
+| `full-solo` | Solo Pianoteq | Solo Pianoteq |
+| `split` | Pianoteq + Ketron | Solo Ketron |
+| `split-solo` | Solo Pianoteq | Solo Ketron |
 
-Pressing the same mode button again toggles it off and restores normal
-Ketron-only routing.  The Launchkey LCD always reflects the active mode.
-
-Pianoteq is launched automatically (headless, with JSON-RPC enabled) if
-the configured executable is found and the MIDI port is not yet open.
-Individual instruments can be selected at runtime with
-`"type": "PIANOTEQ_PRESET"`, `"preset": "<exact preset name>"`.
-
-Configure the integration in `armonix.conf` under `[pianoteq]`:
+Poiché Armonix gira come utente della sessione grafica, Pianoteq può essere
+avviato direttamente senza problemi di permessi.  Configurazione in `armonix.conf`:
 
 ```ini
 [pianoteq]
-executable  = /home/user/Pianoteq 9/x86-64bit/Pianoteq 9
+executable  = /home/utente/Pianoteq 9/x86-64bit/Pianoteq 9
 port_keyword = Pianoteq
 split_note  = 60
 jsonrpc_url = http://127.0.0.1:8081/jsonrpc
 ```
 
-## Piano pedal unit (DIY)
+Premere lo stesso tasto di modalità una seconda volta disattiva Pianoteq e
+torna al routing solo Ketron (toggle).  Il display LCD del Launchkey mostra
+sempre la modalità attiva.
 
-Armonix supports a custom three-pedal unit built from a
-**Studiologic VFP3-10** pedalboard connected to an
-**Arduino Pro Micro (ATmega32U4)** via USB serial (`/dev/ttyACM0`).
+## Pedaliera MIDI (DIY)
 
-The Arduino firmware sends one CSV line per event in the format
-`right,center,left` where:
+Armonix supporta una pedaliera a tre pedali basata su **Studiologic VFP3-10**
+collegata a un **Arduino Leonardo (ATmega32U4)** via USB MIDI.
 
-* **right** — sustain pedal, continuous value 0–127
-* **center** — sostenuto pedal, binary: 0 or 1
-* **left** — soft / una corda (sordina) pedal, binary: 0 or 1
+Il firmware Arduino invia CC MIDI standard:
 
-Pedal messages are routed to the Ketron EVM, to Pianoteq, or to both,
-depending on the active Pianoteq routing mode (only `full-solo` suppresses
-the Ketron output).  The device is detected and started automatically at
-runtime; it can be unplugged and reconnected without restarting the service.
-Only pedals whose value actually changes generate a MIDI message — no
-flooding from constant polling.
+| CC | Pedale | Tipo |
+|----|--------|------|
+| 64 | Destro (sustain) | Continuo 0–127 |
+| 66 | Centro (sostenuto) | Binario 0/127 |
+| 67 | Sinistro (sordina) | Binario 0/127 |
 
-Configure the device path and baud rate in `armonix.conf`:
+La pedaliera viene rilevata automaticamente tramite keyword sulla porta ALSA.
+Può essere scollegata e ricollegata senza riavviare il servizio.
+
+Configurazione in `armonix.conf`:
 
 ```ini
 [pedals]
-device_path = /dev/ttyACM0
-baud_rate   = 115200
+port_keyword = Arduino
 ```
 
-### Pedal MIDI message configuration
+### Messaggi MIDI per pedale
 
-The MIDI message sent for each pedal and each destination (EVM / Pianoteq)
-is fully configurable in `/etc/armonix/pedals_config.json`.  Three message
-types are supported:
+Il messaggio inviato per ogni pedale e ogni destinazione (EVM / Pianoteq)
+è configurabile in `pedals_config.json`.  Tre tipi supportati:
 
-| Type | Description |
-|---|---|
-| `CC` | Standard Control Change — `channel` + `control` number |
-| `SYSEX` | Binary on/off SysEx — separate `pressed` and `released` byte arrays (without `F0`/`F7`) |
-| `SYSEX_VALUE` | Continuous SysEx — `template` byte array with the pedal value appended as the last byte |
+| Tipo | Descrizione |
+|------|-------------|
+| `CC` | Control Change standard |
+| `SYSEX` | SysEx on/off — array `pressed` e `released` (senza F0/F7) |
+| `SYSEX_VALUE` | SysEx continuo — template con il valore del pedale come ultimo byte |
 
-Default configuration (matching the Ketron EVM SysEx protocol):
-
-SysEx byte arrays must use **decimal** values (JSON does not support hex
-literals): `0x26` → `38`, `0x79` → `121`, `0x7F` → `127`, etc.
+> I byte SysEx usano valori **decimali** (JSON non supporta hex):
+> `0x26` → `38`, `0x79` → `121`, `0x7F` → `127`, ecc.
 
 ```json
 {
-  "right":  { "evm": { "type": "CC",    "control": 64 },
+  "right":  { "evm": { "type": "CC", "control": 64 },
               "pianoteq": { "type": "CC", "control": 64 } },
   "center": { "evm": { "type": "SYSEX",
                         "pressed":  [38, 121, 3, 2, 127],
@@ -167,104 +169,24 @@ literals): `0x26` → `38`, `0x79` → `121`, `0x7F` → `127`, etc.
 }
 ```
 
-## Touchscreen shutdown
+## Shutdown da touchscreen
 
-When Armonix is running on a touchscreen device and the Ketron EVM is **not
-connected**, tapping any of the five LED indicators in the graphical bar
-opens a confirmation dialog with two large buttons:
+Quando il Ketron EVM è **disconnesso**, toccare uno qualsiasi dei cinque LED
+nella barra grafica apre un dialogo di conferma:
 
-* **SI** — stops the `armonix` system service and closes the GUI.
-* **NO** — dismisses the dialog and continues normally.
+* **SI** — ferma il servizio e chiude la GUI
+* **NO** — chiude il dialogo senza fare nulla
 
-This gesture is intentionally disabled when the Ketron EVM is connected:
-tapping the LEDs in that case keeps its existing behaviour (the **X** LED
-toggles the pause state).
+Questo gesto è disabilitato quando il Ketron è connesso.
 
-## Manual tests
-
-To verify the Launchkey message filter you can run the manual script:
+## Test manuali
 
 ```bash
 python tests/manual_launchkey_filter.py
 ```
 
-The script confirms that only messages on channel 1 (mido channel 0) are
-forwarded to the Ketron while others are discarded.
+## Configurazione keypad
 
-## Keypad configuration
-
-`keypad_config.json` defines the mapping between keypad keys and Sysex,
-Footswitch or NRPN messages sent to the Ketron.  Modify this file to
-adapt the commands to your needs.
-
-### NRPN commands
-
-NRPN presets for the Ketron microphone section are listed in
-`nrpn_lookup.py`.  Each entry exposes the NRPN MSB/LSB address and the
-available values.  To trigger one of these presets from the keypad add a
-mapping with `"type": "NRPN"` and specify the target preset with the
-`value` field:
-
-```json
-"KEY_U": { "type": "NRPN", "name": "MICRO_PRESET", "value": "Standard" }
-```
-
-When the configured key is pressed the keypad sends the appropriate
-Control Change sequence (`CC 99`, `CC 98`, `CC 06`) on MIDI channel 16 by
-default.  If your Ketron expects the microphone NRPNs on a different
-channel you can override it per key by adding either a `"channel"` or a
-`"ch"` field (e.g. `"ch": 2` for MIDI channel 2).  The `value` field
-accepts both the human readable name and a raw integer between 0 and 127,
-allowing custom presets to be added without modifying the lookup table.
-
-## Custom pads with velocity levels
-
-Pads on the Launchkey can send different Sysex messages depending on the
-received **velocity**.  In `custom_sysex_lookup.py` several levels can be
-defined through the `levels` key, each specifying:
-
-* velocity range (`min`/`max`)
-* displayed name
-* optional pad colour
-* list of Sysex messages to send
-
-Example:
-
-```python
-"ARRA_A_BREAK": {
-    "levels": [
-        {
-            "name": "ARRA_A_BREAK",
-            "min": 100,
-            "max": 127,
-            "color": 23,
-            "sysex": [ [0x26, 0x79, 0x03, 0x03, 0x7F] ]
-        },
-        {
-            "name": "NOTE_A",
-            "min": 1,
-            "max": 99,
-            "color": 5,
-            "sysex": [ [0x26, 0x79, 0x03, 0x03, 0x7F] ]
-        }
-    ]
-}
-```
-
-In `launchkey_config.json` the pad can then be mapped with
-`"type": "CUSTOM"` and the corresponding `name`:
-
-```json
-{ "note": 112, "channel": 0, "type": "CUSTOM", "name": "ARRA_A_BREAK", "group": 1, "color": 23, "colormode": "static" }
-```
-
-If a level defines a colour it overrides the standard one; otherwise the
-behaviour defined by the group or configuration is used.
-
-## Adapting to other setups
-
-The logic is split into modules (state management, MIDI filters, keypad
-listener) which makes it easy to extend the system to other instruments
-or controllers.  You only need to adjust the mappings and, if required,
-add new MIDI filter modules.
-
+`keypad_config.json` definisce la mappatura tra i tasti fisici e i comandi
+inviati al Ketron.  Vedere `docs/configuration-guide.md` per tutti i tipi
+di azione disponibili.

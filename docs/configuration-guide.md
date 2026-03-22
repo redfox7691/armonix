@@ -9,8 +9,20 @@
 | `keypad_config.json` | Mapping tasti del tastierino USB |
 | `pedals_config.json` | Messaggi MIDI inviati per ogni pedale |
 
-In sviluppo i file vengono letti direttamente dalla directory sorgente.
-Nel pacchetto installato la copia in `/etc/armonix/` ha priorità su `/usr/lib/armonix/`.
+I file vengono cercati nell'ordine:
+
+| Priorità | Percorso | Uso |
+|----------|----------|-----|
+| 1 | `~/.config/armonix/` | Override personali (più alta priorità) |
+| 2 | `/etc/armonix/` | Default installati dal pacchetto |
+| 3 | directory sorgente | Fallback per lo sviluppo |
+
+Per personalizzare un file senza modificare i default di sistema:
+```bash
+mkdir -p ~/.config/armonix
+cp /etc/armonix/launchkey_config.json ~/.config/armonix/
+# modifica ~/.config/armonix/launchkey_config.json
+```
 
 ---
 
@@ -29,8 +41,7 @@ split_note      = 60                 ; C4 — nota di divisione mano sx/dx
 jsonrpc_url     = http://127.0.0.1:8081/jsonrpc
 
 [pedals]
-device_path     = /dev/ttyACM0
-baud_rate       = 115200
+port_keyword    = Arduino            ; stringa cercata nei nomi delle porte ALSA
 ```
 
 ---
