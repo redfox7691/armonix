@@ -48,16 +48,6 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         self.ketron_port = None
         self.ble_port = None
         self.state = "waiting"   # 'waiting', 'ready', 'paused'
-        if QT_AVAILABLE and QtCore.QCoreApplication.instance() is not None:
-            self.timer = QtCore.QTimer()
-            self.timer.timeout.connect(self.poll_ports)
-            self.timer.start(1000)  # Ogni secondo
-        else:
-            self.timer = None
-            self._polling_thread = threading.Thread(
-                target=self._polling_loop, daemon=True
-            )
-            self._polling_thread.start()
         self.led_states = ['yellow'] * 5  # All'inizio: animazione "cavalcante"
         self.anim_counter = 0
 
@@ -92,6 +82,19 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         self.ble_connected = False
         self.ble_listener_thread = None
         self.ble_listener_stop = None
+
+        # Avvia il timer/thread di polling DOPO aver inizializzato tutti gli
+        # attributi, per evitare AttributeError se il thread parte troppo presto.
+        self.timer = None
+        if QT_AVAILABLE and QtCore.QCoreApplication.instance() is not None:
+            self.timer = QtCore.QTimer()
+            self.timer.timeout.connect(self.poll_ports)
+            self.timer.start(1000)  # Ogni secondo
+        else:
+            self._polling_thread = threading.Thread(
+                target=self._polling_loop, daemon=True
+            )
+            self._polling_thread.start()
 
 
     def set_ledbar(self, ledbar):
