@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import shlex
 import signal
 import subprocess
 import threading
@@ -110,11 +111,18 @@ class VncLauncher(threading.Thread):
             self.join(timeout=5)
         if self._process and self._process.poll() is None:
             try:
-                # shell=True + start_new_session=True: il VNC client è figlio
-                # della shell. Terminiamo l'intero gruppo di processi così
-                # nessun figlio sopravvive.
+                # shell=True + start_new_session=True: termina l'intero gruppo
+                # di processi (shell + figli diretti).
                 os.killpg(os.getpgid(self._process.pid), signal.SIGTERM)
             except Exception:  # pragma: no cover - defensive logging
                 self.logger.exception(
                     "Unable to terminate the VNC command. / Impossibile terminare il comando VNC."
                 )
+        # Alcune app GUI (es. Remmina) si daemonizzano: forkano un figlio in
+        # un nuovo session/group che sopravvive al killpg. Usiamo pkill sul
+        # nome dell'eseguibile come fallback.
+        try:
+            exe = os.path.basename(shlex.split(self.config.command)[0])
+            subprocess.run(["pkill", "-x", exe], check=False)
+        except Exception:
+            pass
