@@ -2,14 +2,27 @@
 set -e
 
 if command -v systemctl >/dev/null 2>&1 && [ "$1" = "configure" ]; then
-    # Enable and start the user service for every logged-in non-root user.
-    # On a dedicated single-user machine this is typically just one user.
-    if command -v loginctl >/dev/null 2>&1; then
+    # Prefer $SUDO_USER (set when installing via sudo) for reliable detection.
+    # Fall back to loginctl for other installation methods.
+    _reload_user() {
+        local user="$1"
+        local uid
+        uid=$(id -u "$user" 2>/dev/null) || return
+        XDG_RUNTIME_DIR="/run/user/${uid}" \
+            runuser -l "$user" -c \
+            "XDG_RUNTIME_DIR=/run/user/${uid} systemctl --user daemon-reload >/dev/null 2>&1 || true" || true
+        XDG_RUNTIME_DIR="/run/user/${uid}" \
+            runuser -l "$user" -c \
+            "XDG_RUNTIME_DIR=/run/user/${uid} systemctl --user enable --now armonix-gui.service >/dev/null 2>&1 || true" || true
+    }
+
+    if [ -n "${SUDO_USER:-}" ] && [ "${SUDO_USER}" != "root" ]; then
+        _reload_user "${SUDO_USER}"
+    elif command -v loginctl >/dev/null 2>&1; then
         loginctl list-users --no-legend 2>/dev/null | awk '{print $2}' | while read -r user; do
             [ -z "$user" ] && continue
             [ "$user" = "root" ] && continue
-            runuser -l "$user" -c "systemctl --user daemon-reload >/dev/null 2>&1 || true" || true
-            runuser -l "$user" -c "systemctl --user enable --now armonix-gui.service >/dev/null 2>&1 || true" || true
+            _reload_user "$user"
         done || true
     fi
 fi

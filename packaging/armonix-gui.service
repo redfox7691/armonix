@@ -8,6 +8,7 @@ ExecStart=/usr/bin/armonix-gui
 Restart=on-failure
 RestartSec=3
 Environment=PYTHONUNBUFFERED=1
+Environment=DISPLAY=:0
 StandardOutput=journal
 StandardError=journal
 

@@ -36,7 +36,7 @@ I file di configurazione vengono cercati nell'ordine:
 
 ```bash
 make deb
-sudo dpkg -i build/deb/armonix_3.0.1.deb
+sudo dpkg -i build/deb/armonix_3.0.2.deb
 ```
 
 Il pacchetto installa i moduli Python in `/usr/lib/armonix/`, i default di

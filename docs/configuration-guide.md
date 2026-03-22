@@ -135,8 +135,11 @@ Premi per attivare, premi di nuovo per tornare alla modalità solo Ketron (**tog
 | `split` | Pianoteq + Ketron | Solo Ketron |
 | `split-solo` | Solo Pianoteq | Solo Ketron |
 
-Pianoteq viene avviato automaticamente in modalità headless la prima volta che si attiva una modalità.
+Pianoteq viene avviato automaticamente la prima volta che si attiva una modalità.
 Il display LCD del Launchkey mostra la modalità attiva.
+
+Se Pianoteq è già in esecuzione (avviato manualmente o come servizio separato),
+Armonix lo rileva dalla porta ALSA e non ne lancia una seconda istanza.
 
 ### `PIANOTEQ_PRESET` — seleziona uno strumento Pianoteq
 
@@ -151,6 +154,57 @@ Anche questa può essere assegnata a un CC:
 ```json
 { "control": 45, "channel": 15, "type": "PIANOTEQ_PRESET", "preset": "Bechstein DG" }
 ```
+
+---
+
+## Configurazione Pianoteq
+
+### `armonix.conf` — sezione `[pianoteq]`
+
+```ini
+[pianoteq]
+executable   = /home/b0/pianoteq/p
+options      = --headless
+port_keyword = Pianoteq
+split_note   = 60
+jsonrpc_url  = http://127.0.0.1:8081/jsonrpc
+```
+
+| Chiave | Descrizione |
+|--------|-------------|
+| `executable` | Percorso completo dell'eseguibile. Vuoto = non avviare automaticamente. Usa un link simbolico se il nome contiene spazi. |
+| `options` | Opzioni aggiuntive passate all'avvio, es. `--headless` (nasconde la GUI di Pianoteq). Armonix aggiunge sempre `--serve 127.0.0.1:8081`. |
+| `port_keyword` | Stringa cercata nei nomi delle porte ALSA per identificare Pianoteq. |
+| `split_note` | Nota di separazione mano sx/dx in modalità `split` (numero MIDI, es. 60 = C4). |
+| `jsonrpc_url` | URL del server JSON-RPC di Pianoteq per la selezione dei preset. |
+
+### Configurazione MIDI di Pianoteq
+
+Pianoteq di default si connette automaticamente a tutti i dispositivi MIDI trovati,
+inclusa la Launchkey. Questo bypassa il routing di Armonix e causa problemi:
+le note arrivano a Pianoteq **anche quando non dovrebbero** (modalità Ketron-only).
+
+**Soluzione: disabilita l'auto-connect in Pianoteq.**
+
+1. Avvia Pianoteq con la GUI (senza `--headless`)
+2. Vai in **Edit → MIDI Settings** (o **Preferenze → MIDI**)
+3. Nella lista dei dispositivi di input, **deseleziona** la Launchkey
+4. Lascia attivo solo il dispositivo che Armonix usa come porta virtuale,
+   oppure lascia tutto deselezionato se Armonix gestisce direttamente la porta ALSA
+
+Una volta salvata la configurazione, Pianoteq ricorderà questa impostazione
+anche avviandolo in modalità `--headless`.
+
+### Avvio automatico vs avvio manuale
+
+Armonix avvia Pianoteq automaticamente al primo press del tasto PIANOTEQ **solo se**
+`executable` è configurato. Prima di avviare controlla:
+- se la porta ALSA è già presente → non lancia nulla
+- se il processo è già in esecuzione (`pgrep`) → attende che la porta appaia
+
+Se preferisci avviare Pianoteq manualmente (o tramite un servizio utente separato)
+prima di avviare Armonix, lascia `executable` vuoto: Armonix troverà
+la porta ALSA automaticamente senza tentare di lanciare nulla.
 
 ---
 

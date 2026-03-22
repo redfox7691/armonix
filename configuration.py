@@ -42,6 +42,7 @@ class PedalsConfig:
 @dataclass(frozen=True)
 class PianoteqConfig:
     executable: str = ""
+    options: str = ""
     port_keyword: str = "Pianoteq"
     split_note: int = 60
     jsonrpc_url: str = "http://127.0.0.1:8081/jsonrpc"
@@ -119,6 +120,7 @@ def load_config(path: Optional[str] = None) -> ArmonixConfig:
     pedals_cfg = PedalsConfig(port_keyword=pedals_keyword)
 
     pianoteq_exec = parser.get("pianoteq", "executable", fallback="").strip()
+    pianoteq_options = parser.get("pianoteq", "options", fallback="").strip()
     pianoteq_keyword = (
         parser.get("pianoteq", "port_keyword", fallback="Pianoteq").strip() or "Pianoteq"
     )
@@ -129,6 +131,7 @@ def load_config(path: Optional[str] = None) -> ArmonixConfig:
     )
     pianoteq_cfg = PianoteqConfig(
         executable=pianoteq_exec,
+        options=pianoteq_options,
         port_keyword=pianoteq_keyword,
         split_note=pianoteq_split,
         jsonrpc_url=pianoteq_rpc_url,
