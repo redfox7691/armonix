@@ -108,7 +108,6 @@ avviato direttamente senza problemi di permessi.  Configurazione in `armonix.con
 ```ini
 [pianoteq]
 executable  = /home/utente/Pianoteq 9/x86-64bit/Pianoteq 9
-port_keyword = Pianoteq
 split_note  = 60
 jsonrpc_url = http://127.0.0.1:8081/jsonrpc
 ```
@@ -227,6 +226,28 @@ AutomaticLogin=b0
 
 Una volta effettuato l'autologin, systemd avvierà automaticamente
 `armonix-gui.service` e tutti i servizi con `WantedBy=graphical-session.target`.
+
+### Headless (Raspberry Pi o server senza display)
+
+Su macchine senza ambiente grafico (es. Raspberry Pi), non esiste una
+sessione grafica e il login automatico non è necessario.  Si usa invece
+**`loginctl enable-linger`**, che fa avviare la sessione utente — e i
+relativi servizi — al boot anche senza nessun login:
+
+```bash
+sudo loginctl enable-linger <utente>
+```
+
+In questo caso usare **`armonix.service`** (headless) invece di
+`armonix-gui.service`, che richiede un display:
+
+```bash
+systemctl --user enable armonix.service
+systemctl --user disable armonix-gui.service
+```
+
+Il servizio headless ha `WantedBy=default.target` e parte automaticamente
+dopo il boot grazie al linger.  Non è richiesto alcun display manager.
 
 ## Shutdown da touchscreen
 

@@ -36,7 +36,6 @@ ketron_keyword  = Ketron             ; idem per l'EVM
 
 [pianoteq]
 executable      = /home/utente/Pianoteq 9/x86-64bit/Pianoteq 9
-port_keyword    = Pianoteq           ; stringa cercata nelle porte ALSA
 split_note      = 60                 ; C4 — nota di divisione mano sx/dx
 jsonrpc_url     = http://127.0.0.1:8081/jsonrpc
 
@@ -165,7 +164,6 @@ Anche questa può essere assegnata a un CC:
 [pianoteq]
 executable   = /home/b0/pianoteq/p
 options      = --headless
-port_keyword = Pianoteq
 split_note   = 60
 jsonrpc_url  = http://127.0.0.1:8081/jsonrpc
 ```
@@ -174,7 +172,6 @@ jsonrpc_url  = http://127.0.0.1:8081/jsonrpc
 |--------|-------------|
 | `executable` | Percorso completo dell'eseguibile. Vuoto = non avviare automaticamente. Usa un link simbolico se il nome contiene spazi. |
 | `options` | Opzioni aggiuntive passate all'avvio, es. `--headless` (nasconde la GUI di Pianoteq). Armonix aggiunge sempre `--serve 127.0.0.1:8081`. |
-| `port_keyword` | Stringa cercata nei nomi delle porte ALSA per identificare Pianoteq. |
 | `split_note` | Nota di separazione mano sx/dx in modalità `split` (numero MIDI, es. 60 = C4). |
 | `jsonrpc_url` | URL del server JSON-RPC di Pianoteq per la selezione dei preset. |
 
@@ -191,26 +188,24 @@ Pianoteq (note, CC pedali) vengono inviati su questa porta.
 
 **Configurazione una-tantum in Pianoteq:**
 
-1. Avvia Armonix e attiva una modalità Pianoteq (per creare la porta)
+1. Avvia Armonix (la porta "Armonix" appare subito in ALSA all'avvio)
 2. Avvia Pianoteq con la GUI (senza `--headless`)
 3. Vai in **Edit → MIDI Settings**
 4. Nella lista dei dispositivi di **input**, seleziona **Armonix** e
    deseleziona tutti gli altri (Launchkey, Fantom, ecc.)
 5. Salva — Pianoteq ricorderà la scelta anche in modalità `--headless`
 
-La porta "Armonix" è sempre visibile in `aconnect -l` dopo il primo
-utilizzo di una modalità Pianoteq.
+La porta "Armonix" è visibile in `aconnect -l` fin dall'avvio di Armonix,
+indipendentemente dallo stato di Pianoteq.
 
 ### Avvio automatico vs avvio manuale
 
 Armonix avvia Pianoteq automaticamente al primo press del tasto PIANOTEQ **solo se**
-`executable` è configurato. Prima di avviare controlla:
-- se la porta ALSA è già presente → non lancia nulla
-- se il processo è già in esecuzione (`pgrep`) → attende che la porta appaia
+`executable` è configurato. Prima di avviare controlla se il processo è già
+in esecuzione (`pgrep`) — se sì, non lancia nulla.
 
-Se preferisci avviare Pianoteq manualmente (o tramite un servizio utente separato)
-prima di avviare Armonix, lascia `executable` vuoto: Armonix troverà
-la porta ALSA automaticamente senza tentare di lanciare nulla.
+Se preferisci avviare Pianoteq manualmente (o come servizio separato),
+lascia `executable` vuoto: Armonix non tenterà di lanciarlo.
 
 ---
 
