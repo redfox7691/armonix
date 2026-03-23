@@ -1,32 +1,29 @@
 #!/bin/sh
 set -e
 
-if ! id -u armonix >/dev/null 2>&1; then
-    adduser --system --group --home /var/lib/armonix --shell /usr/sbin/nologin armonix
-fi
+if command -v systemctl >/dev/null 2>&1 && [ "$1" = "configure" ]; then
+    # Prefer $SUDO_USER (set when installing via sudo) for reliable detection.
+    # Fall back to loginctl for other installation methods.
+    _reload_user() {
+        local user="$1"
+        local uid
+        uid=$(id -u "$user" 2>/dev/null) || return
+        XDG_RUNTIME_DIR="/run/user/${uid}" \
+            runuser -l "$user" -c \
+            "XDG_RUNTIME_DIR=/run/user/${uid} systemctl --user daemon-reload >/dev/null 2>&1 || true" || true
+        XDG_RUNTIME_DIR="/run/user/${uid}" \
+            runuser -l "$user" -c \
+            "XDG_RUNTIME_DIR=/run/user/${uid} systemctl --user enable --now armonix-gui.service >/dev/null 2>&1 || true" || true
+    }
 
-if command -v adduser >/dev/null 2>&1; then
-    adduser armonix audio >/dev/null 2>&1 || true
-else
-    usermod -a -G audio armonix >/dev/null 2>&1 || true
-fi
-
-install -d -o armonix -g armonix -m 0755 /var/lib/armonix
-
-if command -v systemctl >/dev/null 2>&1; then
-    systemctl daemon-reload >/dev/null 2>&1 || true
-    if [ "$1" = "configure" ]; then
-        systemctl enable armonix.service >/dev/null 2>&1 || true
-        systemctl restart armonix.service >/dev/null 2>&1 || true
-        systemctl --user --global enable armonix-gui.service >/dev/null 2>&1 || true
-        if command -v loginctl >/dev/null 2>&1; then
-            loginctl list-users --no-legend 2>/dev/null | awk 'NR>1 {print $2}' | while read -r user; do
-                [ -z "$user" ] && continue
-                [ "$user" = "root" ] && continue
-                runuser -l "$user" -c "systemctl --user daemon-reload >/dev/null 2>&1 || true" || true
-                runuser -l "$user" -c "systemctl --user enable --now armonix-gui.service >/dev/null 2>&1 || true" || true
-            done || true
-        fi
+    if [ -n "${SUDO_USER:-}" ] && [ "${SUDO_USER}" != "root" ]; then
+        _reload_user "${SUDO_USER}"
+    elif command -v loginctl >/dev/null 2>&1; then
+        loginctl list-users --no-legend 2>/dev/null | awk '{print $2}' | while read -r user; do
+            [ -z "$user" ] && continue
+            [ "$user" = "root" ] && continue
+            _reload_user "$user"
+        done || true
     fi
 fi
 

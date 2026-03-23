@@ -48,16 +48,6 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         self.ketron_port = None
         self.ble_port = None
         self.state = "waiting"   # 'waiting', 'ready', 'paused'
-        if QT_AVAILABLE and QtCore.QCoreApplication.instance() is not None:
-            self.timer = QtCore.QTimer()
-            self.timer.timeout.connect(self.poll_ports)
-            self.timer.start(1000)  # Ogni secondo
-        else:
-            self.timer = None
-            self._polling_thread = threading.Thread(
-                target=self._polling_loop, daemon=True
-            )
-            self._polling_thread.start()
         self.led_states = ['yellow'] * 5  # All'inizio: animazione "cavalcante"
         self.anim_counter = 0
 
@@ -72,8 +62,11 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
 
         # Pianoteq
         self.pianoteq_config = pianoteq_config
-        self.pianoteq_mode = None   # None | "full" | "split"
-        self.pianoteq_port = None   # ALSA output port name for Pianoteq
+        self.pianoteq_mode = None   # None | "full" | "full-solo" | "split" | "split-solo"
+        # Apri subito la porta virtuale "Armonix" così altri software la vedono
+        # anche prima che una modalità Pianoteq venga attivata.
+        if hasattr(self.master_module, "get_pianoteq_virtual_out"):
+            self.master_module.get_pianoteq_virtual_out()
 
         # Pedali MIDI
         self.pedals_config = pedals_config
@@ -83,14 +76,25 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         self.pedal_stop_event = threading.Event()
         self._pedal_ketron_out = None       # porte aperte e cachate per i pedali
         self._pedal_ketron_out_name = None
-        self._pedal_pianoteq_out = None
-        self._pedal_pianoteq_out_name = None
         self._pedal_midi_cfg = self._load_pedal_midi_config()
 
         # Bluetooth MIDI (LED B)
         self.ble_connected = False
         self.ble_listener_thread = None
         self.ble_listener_stop = None
+
+        # Avvia il timer/thread di polling DOPO aver inizializzato tutti gli
+        # attributi, per evitare AttributeError se il thread parte troppo presto.
+        self.timer = None
+        if QT_AVAILABLE and QtCore.QCoreApplication.instance() is not None:
+            self.timer = QtCore.QTimer()
+            self.timer.timeout.connect(self.poll_ports)
+            self.timer.start(1000)  # Ogni secondo
+        else:
+            self._polling_thread = threading.Thread(
+                target=self._polling_loop, daemon=True
+            )
+            self._polling_thread.start()
 
 
     def set_ledbar(self, ledbar):
@@ -263,23 +267,15 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
             mode = None  # toggle off
 
         if mode in ("full", "full-solo", "split", "split-solo"):
-            if not self.pianoteq_config or not self.pianoteq_config.enabled:
-                self.logger.warning("Pianoteq non configurato (executable vuoto)")
-                return
-            from pianoteq_manager import ensure_pianoteq_running
-            if not ensure_pianoteq_running(self.pianoteq_config, self.logger):
-                self.logger.error("Pianoteq non disponibile")
-                return
-            port = self.find_output_port(self.pianoteq_config.port_keyword)
-            if not port:
-                self.logger.error(
-                    "Porta MIDI Pianoteq non trovata (keyword=%s)",
-                    self.pianoteq_config.port_keyword,
-                )
-                return
-            self.pianoteq_port = port
-        else:
-            self.pianoteq_port = None
+            # Avvia Pianoteq se è configurato l'eseguibile (best-effort).
+            # Se Pianoteq è già in esecuzione o gestito manualmente, si
+            # connette da solo alla porta virtuale "Armonix".
+            if self.pianoteq_config and self.pianoteq_config.enabled:
+                from pianoteq_manager import ensure_pianoteq_running
+                if not ensure_pianoteq_running(self.pianoteq_config, self.logger):
+                    self.logger.warning(
+                        "Pianoteq non raggiungibile — attiva la modalità comunque"
+                    )
 
         self.pianoteq_mode = mode
         self.logger.info("Modalità Pianoteq: %s", mode or "off")
@@ -422,23 +418,11 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
             if self._pedal_ketron_out:
                 _send_to(self._pedal_ketron_out, "evm")
 
-        # Pianoteq: se una modalità è attiva
-        if self.pianoteq_port and self.pianoteq_mode:
-            if self._pedal_pianoteq_out_name != self.pianoteq_port:
-                if self._pedal_pianoteq_out:
-                    try:
-                        self._pedal_pianoteq_out.close()
-                    except Exception:
-                        pass
-                try:
-                    self._pedal_pianoteq_out = mido.open_output(self.pianoteq_port, exclusive=False)
-                    self._pedal_pianoteq_out_name = self.pianoteq_port
-                except Exception as exc:
-                    self.logger.error("Pedali: impossibile aprire porta Pianoteq: %s", exc)
-                    self._pedal_pianoteq_out = None
-                    self._pedal_pianoteq_out_name = None
-            if self._pedal_pianoteq_out:
-                _send_to(self._pedal_pianoteq_out, "pianoteq")
+        # Pianoteq: se una modalità è attiva, usa la porta virtuale "Armonix"
+        if self.pianoteq_mode and hasattr(self.master_module, "get_pianoteq_virtual_out"):
+            vport = self.master_module.get_pianoteq_virtual_out()
+            if vport:
+                _send_to(vport, "pianoteq")
 
     def start_pedal_listener(self):
         if not self.midi_io_enabled:

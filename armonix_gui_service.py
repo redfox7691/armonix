@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import subprocess
 import sys
 import time
 from typing import Optional
@@ -179,7 +178,7 @@ def _run_gui_helpers(config, args, logger, vnc_logger, mouse_logger) -> None:
         ketron_port_keyword=config.midi.ketron_port_keyword,
         ble_port_keyword=config.midi.bluetooth_port_keyword,
         keypad_device=config.keypad_device,
-        enable_midi_io=False,
+        enable_midi_io=True,
         pianoteq_config=config.pianoteq,
         pedals_config=config.pedals,
         parent_logger=logger,
@@ -188,7 +187,10 @@ def _run_gui_helpers(config, args, logger, vnc_logger, mouse_logger) -> None:
     app = QtWidgets.QApplication(sys.argv)
 
     def _shutdown():
-        subprocess.run(["systemctl", "stop", "armonix"], check=False)
+        # Esce dall'event loop Qt: app.exec_() ritorna, il blocco finally
+        # si occupa di fermare VNC e gli altri servizi.
+        # Non usare systemctl stop: SIGTERM arriverebbe prima che il finally
+        # completi, lasciando VNC attivo.
         app.quit()
 
     led_bar = LedBar(states_getter=state_manager.get_led_states, shutdown_callback=_shutdown)

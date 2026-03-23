@@ -134,6 +134,8 @@ def init_default_display(outport, verbose=False):
     line2 = f"v. {ARMONIX_VERSION}".center(16)
     _default_lines = (line1[:16], line2[:16])
     _send_display(outport, *_default_lines, verbose=verbose)
+    # Apri subito la porta virtuale così Pianoteq la vede nell'elenco ALSA.
+    get_pianoteq_virtual_out()
 
 
 def show_default_display(outport, verbose=False):
@@ -448,9 +450,8 @@ def filter_and_translate_msg(
         return
 
     pianoteq_mode = getattr(state_manager, "pianoteq_mode", None)
-    pianoteq_port = getattr(state_manager, "pianoteq_port", None)
 
-    if pianoteq_mode and pianoteq_port:
+    if pianoteq_mode:
         split_note = (
             state_manager.pianoteq_config.split_note
             if getattr(state_manager, "pianoteq_config", None)
@@ -460,24 +461,20 @@ def filter_and_translate_msg(
         note_val = getattr(msg, "note", -1)
 
         if pianoteq_mode == "full":
-            # Tutto a Pianoteq E a Ketron
-            _send_to_pianoteq(msg, pianoteq_port, verbose)
+            _send_to_pianoteq(msg, verbose)
             ketron_outport.send(msg)
             return
         elif pianoteq_mode == "full-solo":
-            # Tutto solo a Pianoteq
-            _send_to_pianoteq(msg, pianoteq_port, verbose)
+            _send_to_pianoteq(msg, verbose)
             return
         elif pianoteq_mode == "split":
-            # Destra (>= split_note): Pianoteq + Ketron; sinistra: solo Ketron
             if is_note_msg and note_val >= split_note:
-                _send_to_pianoteq(msg, pianoteq_port, verbose)
+                _send_to_pianoteq(msg, verbose)
                 ketron_outport.send(msg)
                 return
         elif pianoteq_mode == "split-solo":
-            # Destra (>= split_note): solo Pianoteq; sinistra: solo Ketron
             if is_note_msg and note_val >= split_note:
-                _send_to_pianoteq(msg, pianoteq_port, verbose)
+                _send_to_pianoteq(msg, verbose)
                 return
 
     ketron_outport.send(msg)
@@ -488,35 +485,40 @@ def filter_and_translate_msg(
 # --- DAW port filter ------------------------------------------------------
 
 _ketron_outport = None
-_pianoteq_outport = None
-_pianoteq_outport_name = None
+
+# Porta MIDI virtuale pubblicata da Armonix.  Pianoteq (e qualsiasi altro
+# synth) la vede nella propria lista di input come "Armonix" e vi si connette
+# una volta sola tramite la propria GUI — nessun auto-connect indesiderato.
+_armonix_virtual_out = None
+
+VIRTUAL_PORT_NAME = "Armonix"
 
 
-def _send_to_pianoteq(msg, port_name, verbose=False):
-    """Send a MIDI message to Pianoteq, opening the port lazily."""
-    global _pianoteq_outport, _pianoteq_outport_name
-    if _pianoteq_outport is None or _pianoteq_outport_name != port_name:
-        if _pianoteq_outport is not None:
-            try:
-                _pianoteq_outport.close()
-            except Exception:
-                pass
+def get_pianoteq_virtual_out():
+    """Restituisce la porta MIDI virtuale di Armonix, aprendola se necessario."""
+    global _armonix_virtual_out
+    if _armonix_virtual_out is None:
         try:
-            _pianoteq_outport = mido.open_output(port_name, exclusive=False)
-            _pianoteq_outport_name = port_name
+            _armonix_virtual_out = mido.open_output(VIRTUAL_PORT_NAME, virtual=True)
+            logger.info("Porta MIDI virtuale aperta: %s", VIRTUAL_PORT_NAME)
         except Exception as exc:
-            logger.error("Impossibile aprire porta Pianoteq '%s': %s", port_name, exc)
-            _pianoteq_outport = None
-            _pianoteq_outport_name = None
-            return
+            logger.error("Impossibile aprire porta MIDI virtuale: %s", exc)
+    return _armonix_virtual_out
+
+
+def _send_to_pianoteq(msg, verbose=False):
+    """Invia un messaggio MIDI alla porta virtuale Armonix."""
+    port = get_pianoteq_virtual_out()
+    if port is None:
+        return
     try:
-        _pianoteq_outport.send(msg)
+        port.send(msg)
         if verbose:
-            print(f"[LAUNCHKEY-FILTER] -> Pianoteq ({port_name}): {msg}")
+            print(f"[LAUNCHKEY-FILTER] -> Pianoteq (virtual): {msg}")
     except Exception as exc:
         logger.error("Errore invio a Pianoteq: %s", exc)
-        _pianoteq_outport = None
-        _pianoteq_outport_name = None
+        global _armonix_virtual_out
+        _armonix_virtual_out = None
 
 
 def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verbose=False):

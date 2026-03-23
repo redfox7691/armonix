@@ -8,13 +8,17 @@ from typing import Optional
 
 PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# User-local configuration directory (highest priority).
+USER_CONFIG_DIR = os.path.join(
+    os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
+    "armonix",
+)
+
 # System-wide configuration directory used by the Debian package.
 SYSTEM_CONFIG_DIR = "/etc/armonix"
 
 # Directory that always contains the pristine configuration files installed
-# together with the Python modules.  The Debian package also ships copies of
-# these files under ``/usr/share/armonix/examples`` so that administrators can
-# easily restore the defaults.
+# together with the Python modules.  Used as last-resort fallback.
 DEFAULT_CONFIG_DIR = PACKAGE_DIR
 
 
@@ -26,11 +30,15 @@ def _join_if_exists(directory: str, filename: str) -> Optional[str]:
 def get_config_path(filename: str) -> str:
     """Return the preferred path for a configuration file.
 
-    The lookup order mirrors the filesystem layout of the Debian package: the
-    administrator-managed copy in ``/etc/armonix`` has precedence while the
-    pristine copy that ships with the Python modules is used as a fallback so
-    that Armonix always has sensible defaults to load.
+    Lookup order:
+    1. ``~/.config/armonix/`` — user-local overrides (highest priority)
+    2. ``/etc/armonix/``      — system-wide defaults managed by the package
+    3. ``PACKAGE_DIR``        — source tree fallback for development
     """
+
+    user_copy = _join_if_exists(USER_CONFIG_DIR, filename)
+    if user_copy:
+        return user_copy
 
     system_copy = _join_if_exists(SYSTEM_CONFIG_DIR, filename)
     if system_copy:
@@ -40,10 +48,8 @@ def get_config_path(filename: str) -> str:
     if default_copy:
         return default_copy
 
-    # As a last resort return the expected location inside /etc even if the
-    # file does not currently exist.  This mirrors the behaviour of many system
-    # daemons that expect administrators to provide their own configuration.
-    return os.path.join(SYSTEM_CONFIG_DIR, filename)
+    # Last resort: expected user config location even if not present yet.
+    return os.path.join(USER_CONFIG_DIR, filename)
 
 
 def get_default_config_path(filename: str) -> str:

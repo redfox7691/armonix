@@ -1,13 +1,16 @@
 [Unit]
-Description=Armonix GUI and VNC helper (user session)
-PartOf=graphical-session.target
-After=graphical-session.target
+Description=Armonix MIDI controller with GUI (user service)
+After=graphical-session.target sound.target
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/armonix-gui
 Restart=on-failure
+RestartSec=3
 Environment=PYTHONUNBUFFERED=1
+Environment=DISPLAY=:0
+StandardOutput=journal
+StandardError=journal
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target

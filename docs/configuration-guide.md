@@ -9,8 +9,20 @@
 | `keypad_config.json` | Mapping tasti del tastierino USB |
 | `pedals_config.json` | Messaggi MIDI inviati per ogni pedale |
 
-In sviluppo i file vengono letti direttamente dalla directory sorgente.
-Nel pacchetto installato la copia in `/etc/armonix/` ha priorità su `/usr/lib/armonix/`.
+I file vengono cercati nell'ordine:
+
+| Priorità | Percorso | Uso |
+|----------|----------|-----|
+| 1 | `~/.config/armonix/` | Override personali (più alta priorità) |
+| 2 | `/etc/armonix/` | Default installati dal pacchetto |
+| 3 | directory sorgente | Fallback per lo sviluppo |
+
+Per personalizzare un file senza modificare i default di sistema:
+```bash
+mkdir -p ~/.config/armonix
+cp /etc/armonix/launchkey_config.json ~/.config/armonix/
+# modifica ~/.config/armonix/launchkey_config.json
+```
 
 ---
 
@@ -24,13 +36,11 @@ ketron_keyword  = Ketron             ; idem per l'EVM
 
 [pianoteq]
 executable      = /home/utente/Pianoteq 9/x86-64bit/Pianoteq 9
-port_keyword    = Pianoteq           ; stringa cercata nelle porte ALSA
 split_note      = 60                 ; C4 — nota di divisione mano sx/dx
 jsonrpc_url     = http://127.0.0.1:8081/jsonrpc
 
 [pedals]
-device_path     = /dev/ttyACM0
-baud_rate       = 115200
+port_keyword    = Arduino            ; stringa cercata nei nomi delle porte ALSA
 ```
 
 ---
@@ -124,8 +134,11 @@ Premi per attivare, premi di nuovo per tornare alla modalità solo Ketron (**tog
 | `split` | Pianoteq + Ketron | Solo Ketron |
 | `split-solo` | Solo Pianoteq | Solo Ketron |
 
-Pianoteq viene avviato automaticamente in modalità headless la prima volta che si attiva una modalità.
+Pianoteq viene avviato automaticamente la prima volta che si attiva una modalità.
 Il display LCD del Launchkey mostra la modalità attiva.
+
+Se Pianoteq è già in esecuzione (avviato manualmente o come servizio separato),
+Armonix lo rileva dalla porta ALSA e non ne lancia una seconda istanza.
 
 ### `PIANOTEQ_PRESET` — seleziona uno strumento Pianoteq
 
@@ -140,6 +153,59 @@ Anche questa può essere assegnata a un CC:
 ```json
 { "control": 45, "channel": 15, "type": "PIANOTEQ_PRESET", "preset": "Bechstein DG" }
 ```
+
+---
+
+## Configurazione Pianoteq
+
+### `armonix.conf` — sezione `[pianoteq]`
+
+```ini
+[pianoteq]
+executable   = /home/b0/pianoteq/p
+options      = --headless
+split_note   = 60
+jsonrpc_url  = http://127.0.0.1:8081/jsonrpc
+```
+
+| Chiave | Descrizione |
+|--------|-------------|
+| `executable` | Percorso completo dell'eseguibile. Vuoto = non avviare automaticamente. Usa un link simbolico se il nome contiene spazi. |
+| `options` | Opzioni aggiuntive passate all'avvio, es. `--headless` (nasconde la GUI di Pianoteq). Armonix aggiunge sempre `--serve 127.0.0.1:8081`. |
+| `split_note` | Nota di separazione mano sx/dx in modalità `split` (numero MIDI, es. 60 = C4). |
+| `jsonrpc_url` | URL del server JSON-RPC di Pianoteq per la selezione dei preset. |
+
+### Porta MIDI virtuale "Armonix"
+
+Quando viene attivata una modalità Pianoteq, Armonix crea automaticamente
+una porta MIDI virtuale chiamata **Armonix**.  Tutti i messaggi destinati a
+Pianoteq (note, CC pedali) vengono inviati su questa porta.
+
+**Vantaggi rispetto alla connessione diretta:**
+- Le note arrivano a Pianoteq **solo** quando la modalità è attiva
+- I pedali vengono instradati correttamente (EVM o Pianoteq o entrambi)
+- Nessuna interferenza da PipeWire/WirePlumber che auto-connette i dispositivi
+
+**Configurazione una-tantum in Pianoteq:**
+
+1. Avvia Armonix (la porta "Armonix" appare subito in ALSA all'avvio)
+2. Avvia Pianoteq con la GUI (senza `--headless`)
+3. Vai in **Edit → MIDI Settings**
+4. Nella lista dei dispositivi di **input**, seleziona **Armonix** e
+   deseleziona tutti gli altri (Launchkey, Fantom, ecc.)
+5. Salva — Pianoteq ricorderà la scelta anche in modalità `--headless`
+
+La porta "Armonix" è visibile in `aconnect -l` fin dall'avvio di Armonix,
+indipendentemente dallo stato di Pianoteq.
+
+### Avvio automatico vs avvio manuale
+
+Armonix avvia Pianoteq automaticamente al primo press del tasto PIANOTEQ **solo se**
+`executable` è configurato. Prima di avviare controlla se il processo è già
+in esecuzione (`pgrep`) — se sì, non lancia nulla.
+
+Se preferisci avviare Pianoteq manualmente (o come servizio separato),
+lascia `executable` vuoto: Armonix non tenterà di lanciarlo.
 
 ---
 
