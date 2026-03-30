@@ -3,6 +3,7 @@ import logging
 import mido
 import os
 import re
+import sys
 import threading
 import time
 import importlib
@@ -325,7 +326,10 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
         self.keypad_stop_event.clear()
         def midi_cb(scancode, keycode, is_down):
             self.on_keypad_event(scancode, keycode, is_down)
-        from keypadlistener import KeypadListener
+        if sys.platform == "darwin":
+            from keypadlistener_macos import KeypadListener
+        else:
+            from keypadlistener import KeypadListener
         self.keypad_listener = KeypadListener(
             self.keypad_device, midi_cb, self.keypad_stop_event, verbose=self.verbose
         )

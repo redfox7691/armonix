@@ -1,0 +1,100 @@
+# Makefile per installazione di Armonix su macOS (Apple Silicon e Intel).
+#
+# USO (dalla root del progetto):
+#   make -f packaging/macos/Makefile.macos install       # installa servizio headless
+#   make -f packaging/macos/Makefile.macos install-gui   # installa servizio GUI
+#   make -f packaging/macos/Makefile.macos uninstall     # rimuove tutto
+#
+# Prerequisiti:
+#   brew install python@3.12
+#   pip3 install mido python-rtmidi PyQt5 pynput
+#
+# Non modifica nulla del build Linux: il Makefile principale (make deb)
+# non include questo file e produce lo stesso identico risultato di prima.
+
+PYTHON      := python3
+LIB_DIR     := /usr/local/lib/armonix
+BIN_DIR     := /usr/local/bin
+CONFIG_DIR  := $(HOME)/Library/Application\ Support/armonix
+AGENTS_DIR  := $(HOME)/Library/LaunchAgents
+PLIST_DIR   := packaging/macos
+
+ENGINE_PLIST := com.armonix.engine.plist
+GUI_PLIST    := com.armonix.gui.plist
+
+.PHONY: install install-gui uninstall install-deps check
+
+# ── Dipendenze ──────────────────────────────────────────────────────────────
+
+install-deps:
+	@echo "==> Installazione dipendenze Python..."
+	$(PYTHON) -m pip install --upgrade mido python-rtmidi PyQt5 pynput
+	@echo "==> Fatto."
+
+# ── Installazione headless (solo motore MIDI, niente GUI) ───────────────────
+
+install: _install-common
+	@echo "==> Installazione LaunchAgent headless..."
+	install -m644 $(PLIST_DIR)/$(ENGINE_PLIST) $(AGENTS_DIR)/$(ENGINE_PLIST)
+	launchctl load $(AGENTS_DIR)/$(ENGINE_PLIST)
+	@echo "==> armonix-engine installato e avviato."
+	@echo "    Log: /tmp/armonix-engine.log"
+
+# ── Installazione con GUI (barra LED + VNC) ──────────────────────────────────
+
+install-gui: _install-common
+	@echo "==> Installazione LaunchAgent GUI..."
+	install -m644 $(PLIST_DIR)/$(GUI_PLIST) $(AGENTS_DIR)/$(GUI_PLIST)
+	launchctl load $(AGENTS_DIR)/$(GUI_PLIST)
+	@echo "==> armonix-gui installato e avviato."
+	@echo "    Log: /tmp/armonix-gui.log"
+
+# ── Parte comune: moduli Python, script, config ──────────────────────────────
+
+_install-common:
+	@echo "==> Installazione moduli Python in $(LIB_DIR)..."
+	install -d $(LIB_DIR)
+	rsync -a --exclude 'build' --exclude '.git' --exclude '__pycache__' \
+	      --exclude '*.deb' --exclude 'packaging' --exclude 'tests' \
+	      --exclude 'man' --exclude 'docs' \
+	      ./ $(LIB_DIR)/
+	@echo "==> Installazione script in $(BIN_DIR)..."
+	install -d $(BIN_DIR)
+	sed 's|/usr/lib/armonix|$(LIB_DIR)|g' scripts/armonix-engine \
+	    > $(BIN_DIR)/armonix-engine && chmod 755 $(BIN_DIR)/armonix-engine
+	sed 's|/usr/lib/armonix|$(LIB_DIR)|g' scripts/armonix-gui \
+	    > $(BIN_DIR)/armonix-gui    && chmod 755 $(BIN_DIR)/armonix-gui
+	sed 's|/usr/lib/armonix|$(LIB_DIR)|g' scripts/armonix \
+	    > $(BIN_DIR)/armonix        && chmod 755 $(BIN_DIR)/armonix
+	@echo "==> Copia file di configurazione in $(CONFIG_DIR)..."
+	install -d "$(CONFIG_DIR)"
+	for f in armonix.conf keypad_config.json launchkey_config.json pedals_config.json; do \
+	    if [ ! -f "$(CONFIG_DIR)/$$f" ]; then \
+	        install -m644 "$$f" "$(CONFIG_DIR)/$$f"; \
+	        echo "    copiato: $$f"; \
+	    else \
+	        echo "    già presente (non sovrascritto): $$f"; \
+	    fi; \
+	done
+
+# ── Disinstallazione ─────────────────────────────────────────────────────────
+
+uninstall:
+	@echo "==> Disinstallazione Armonix..."
+	-launchctl unload $(AGENTS_DIR)/$(ENGINE_PLIST) 2>/dev/null
+	-launchctl unload $(AGENTS_DIR)/$(GUI_PLIST)    2>/dev/null
+	rm -f $(AGENTS_DIR)/$(ENGINE_PLIST) $(AGENTS_DIR)/$(GUI_PLIST)
+	rm -f $(BIN_DIR)/armonix $(BIN_DIR)/armonix-engine $(BIN_DIR)/armonix-gui
+	rm -rf $(LIB_DIR)
+	@echo "==> La configurazione in $(CONFIG_DIR) NON è stata rimossa."
+	@echo "    Per rimuoverla: rm -rf \"$(CONFIG_DIR)\""
+
+# ── Verifica prerequisiti ────────────────────────────────────────────────────
+
+check:
+	@echo "==> Verifica prerequisiti..."
+	@$(PYTHON) -c "import mido"          && echo "  [OK] mido"          || echo "  [NO] mido"
+	@$(PYTHON) -c "import rtmidi"        && echo "  [OK] python-rtmidi" || echo "  [NO] python-rtmidi"
+	@$(PYTHON) -c "import PyQt5"         && echo "  [OK] PyQt5"         || echo "  [NO] PyQt5 (opzionale, solo GUI)"
+	@$(PYTHON) -c "import pynput"        && echo "  [OK] pynput"        || echo "  [NO] pynput (richiesto per tastierino USB)"
+	@$(PYTHON) -c "import evdev" 2>/dev/null && echo "  [!] evdev trovato (non usato su macOS)" || true

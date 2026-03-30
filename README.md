@@ -26,22 +26,36 @@ audio/MIDI senza vincoli di permessi.
 
 I file di configurazione vengono cercati nell'ordine:
 
-| Priorità | Percorso | Uso |
-|----------|----------|-----|
-| 1 | `~/.config/armonix/` | Override personali (più alta priorità) |
-| 2 | `/etc/armonix/` | Default installati dal pacchetto |
-| 3 | `/usr/lib/armonix/` | Fallback sorgente |
+| Priorità | Linux | macOS |
+|----------|-------|-------|
+| 1 | `~/.config/armonix/` | `~/Library/Application Support/armonix/` |
+| 2 | `/etc/armonix/` | `/Library/Application Support/armonix/` |
+| 3 | `/usr/lib/armonix/` | `/usr/local/lib/armonix/` |
 
-## Installazione dal pacchetto Debian
+## Installazione
+
+### Linux — pacchetto Debian
 
 ```bash
 make deb
-sudo dpkg -i build/deb/armonix_3.1.0.deb
+sudo dpkg -i build/deb/armonix_3.1.1.deb
 ```
 
 Il pacchetto installa i moduli Python in `/usr/lib/armonix/`, i default di
 configurazione in `/etc/armonix/` e abilita automaticamente il servizio utente
 `armonix-gui.service` per l'utente corrente.
+
+### macOS (Apple Silicon / Intel)
+
+```bash
+make -f packaging/macos/Makefile.macos install      # headless
+make -f packaging/macos/Makefile.macos install-gui  # con GUI
+```
+
+Vedi `docs/install-macos.md` per la guida completa (prerequisiti, Homebrew,
+login automatico, differenze rispetto a Linux).
+
+### Configurazione — percorsi
 
 Per personalizzare la configurazione senza toccare i file di sistema:
 

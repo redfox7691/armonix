@@ -3,19 +3,25 @@
 from __future__ import annotations
 
 import os
+import sys
 from typing import Optional
 
 
 PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# User-local configuration directory (highest priority).
-USER_CONFIG_DIR = os.path.join(
-    os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
-    "armonix",
-)
-
-# System-wide configuration directory used by the Debian package.
-SYSTEM_CONFIG_DIR = "/etc/armonix"
+if sys.platform == "darwin":
+    # macOS: segue le convenzioni Apple (Application Support).
+    USER_CONFIG_DIR = os.path.join(
+        os.path.expanduser("~/Library/Application Support"), "armonix"
+    )
+    SYSTEM_CONFIG_DIR = "/Library/Application Support/armonix"
+else:
+    # Linux: segue le specifiche XDG.
+    USER_CONFIG_DIR = os.path.join(
+        os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
+        "armonix",
+    )
+    SYSTEM_CONFIG_DIR = "/etc/armonix"
 
 # Directory that always contains the pristine configuration files installed
 # together with the Python modules.  Used as last-resort fallback.

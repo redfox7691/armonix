@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent per il servizio GUI di Armonix (barra LED + VNC).
+  Richiede sessione grafica attiva — usare solo con login automatico.
+  Installare in ~/Library/LaunchAgents/ e abilitare con:
+      launchctl load ~/Library/LaunchAgents/com.armonix.gui.plist
+  Oppure tramite: make -f packaging/macos/Makefile.macos install-gui
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.armonix.gui</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/armonix-gui</string>
+    </array>
+
+    <!-- Avvia automaticamente al login utente -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Riavvia solo in caso di errore (exit code != 0) -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/armonix-gui.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/armonix-gui.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PYTHONUNBUFFERED</key>
+        <string>1</string>
+    </dict>
+</dict>
+</plist>
