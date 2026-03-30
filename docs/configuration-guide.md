@@ -117,10 +117,17 @@ Premi per attivare, premi di nuovo per tornare alla modalità solo Ketron (**tog
 { "control": 40, "channel": 15, "type": "PIANOTEQ", "mode": "full", "color_on": 5, "color_off": 0 }
 ```
 
+Con ottava abbassata (utile in split per suonare il pianoforte una ottava più bassa):
+
+```json
+{ "control": 38, "channel": 15, "type": "PIANOTEQ", "mode": "split-solo", "octave_shift": -12, "color_on": 5, "color_off": 0 }
+```
+
 | Campo | Valore |
 |-------|--------|
 | `type` | `"PIANOTEQ"` |
 | `mode` | `"full"` / `"full-solo"` / `"split"` / `"split-solo"` |
+| `octave_shift` | Semitoni da aggiungere alle note verso Pianoteq (es. `-12` = un'ottava in basso). Default: `0`. Si azzera automaticamente quando la modalità viene disattivata. |
 | `color_on` | colore LED quando la modalità è **attiva** |
 | `color_off` | colore LED quando è **disattivata** (default: `0` = spento) |
 | `color` | colore fisso alternativo a `color_on` (usato se `color_on` assente) |
@@ -138,7 +145,7 @@ Pianoteq viene avviato automaticamente la prima volta che si attiva una modalit�
 Il display LCD del Launchkey mostra la modalità attiva.
 
 Se Pianoteq è già in esecuzione (avviato manualmente o come servizio separato),
-Armonix lo rileva dalla porta ALSA e non ne lancia una seconda istanza.
+Armonix lo rileva tramite `pgrep` e non ne lancia una seconda istanza.
 
 ### `PIANOTEQ_PRESET` — seleziona uno strumento Pianoteq
 

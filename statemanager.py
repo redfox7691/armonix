@@ -62,7 +62,8 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
 
         # Pianoteq
         self.pianoteq_config = pianoteq_config
-        self.pianoteq_mode = None   # None | "full" | "full-solo" | "split" | "split-solo"
+        self.pianoteq_mode = None         # None | "full" | "full-solo" | "split" | "split-solo"
+        self.pianoteq_octave_shift = 0    # semitoni applicati alle note verso Pianoteq (es. -12)
         # Apri subito la porta virtuale "Armonix" così altri software la vedono
         # anche prima che una modalità Pianoteq venga attivata.
         if hasattr(self.master_module, "get_pianoteq_virtual_out"):
@@ -257,11 +258,14 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
                 self.ledbar.update()
 
     # -------- Tastierino USB methods --------
-    def set_pianoteq_mode(self, mode):
+    def set_pianoteq_mode(self, mode, octave_shift=0):
         """Switch Pianoteq routing mode.
 
         Possible values: ``"full"``, ``"split"``, or ``None`` (off).
         Calling with the currently active mode toggles it off.
+        ``octave_shift`` (semitoni, es. -12) viene applicato alle note
+        inviate a Pianoteq; si azzera automaticamente quando la modalità
+        viene disattivata.
         """
         if mode == self.pianoteq_mode:
             mode = None  # toggle off
@@ -276,9 +280,12 @@ class StateManager(QtCore.QObject if QT_AVAILABLE else object):
                     self.logger.warning(
                         "Pianoteq non raggiungibile — attiva la modalità comunque"
                     )
+            self.pianoteq_octave_shift = octave_shift
+        else:
+            self.pianoteq_octave_shift = 0
 
         self.pianoteq_mode = mode
-        self.logger.info("Modalità Pianoteq: %s", mode or "off")
+        self.logger.info("Modalità Pianoteq: %s (shift %+d)", mode or "off", self.pianoteq_octave_shift)
         if hasattr(self.master_module, "update_pianoteq_display"):
             self.master_module.update_pianoteq_display(mode, self.verbose)
         return self.pianoteq_mode

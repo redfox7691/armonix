@@ -457,24 +457,25 @@ def filter_and_translate_msg(
             if getattr(state_manager, "pianoteq_config", None)
             else 60
         )
+        octave_shift = getattr(state_manager, "pianoteq_octave_shift", 0)
         is_note_msg = msg.type in ("note_on", "note_off", "polytouch")
         note_val = getattr(msg, "note", -1)
 
         if pianoteq_mode == "full":
-            _send_to_pianoteq(msg, verbose)
+            _send_to_pianoteq(msg, verbose, octave_shift)
             ketron_outport.send(msg)
             return
         elif pianoteq_mode == "full-solo":
-            _send_to_pianoteq(msg, verbose)
+            _send_to_pianoteq(msg, verbose, octave_shift)
             return
         elif pianoteq_mode == "split":
             if is_note_msg and note_val >= split_note:
-                _send_to_pianoteq(msg, verbose)
+                _send_to_pianoteq(msg, verbose, octave_shift)
                 ketron_outport.send(msg)
                 return
         elif pianoteq_mode == "split-solo":
             if is_note_msg and note_val >= split_note:
-                _send_to_pianoteq(msg, verbose)
+                _send_to_pianoteq(msg, verbose, octave_shift)
                 return
 
     ketron_outport.send(msg)
@@ -506,8 +507,20 @@ def get_pianoteq_virtual_out():
     return _armonix_virtual_out
 
 
-def _send_to_pianoteq(msg, verbose=False):
-    """Invia un messaggio MIDI alla porta virtuale Armonix."""
+def _send_to_pianoteq(msg, verbose=False, octave_shift=0):
+    """Invia un messaggio MIDI alla porta virtuale Armonix.
+
+    Se ``octave_shift`` è diverso da zero e il messaggio è note_on/note_off/
+    polytouch, la nota viene traslata del numero di semitoni indicato
+    (valori negativi = ottava bassa, es. -12).  Note fuori range 0-127
+    vengono soppresse.
+    """
+    if octave_shift and msg.type in ("note_on", "note_off", "polytouch"):
+        new_note = msg.note + octave_shift
+        if not (0 <= new_note <= 127):
+            return
+        msg = msg.copy(note=new_note)
+
     port = get_pianoteq_virtual_out()
     if port is None:
         return
@@ -665,11 +678,12 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
             elif rtype == "PIANOTEQ":
                 if is_on:
                     mode = rule.get("mode")  # "full", "full-solo", "split", "split-solo"
-                    active = state_manager.set_pianoteq_mode(mode)
+                    octave_shift = rule.get("octave_shift", 0)
+                    active = state_manager.set_pianoteq_mode(mode, octave_shift)
                     color = rule.get("color_on", rule.get("color")) if active else rule.get("color_off", 0)
                     _send_color(daw_outport, "NOTE", msg.note, color, rule.get("colormode", "static"))
                     if verbose:
-                        print(f"[LAUNCHKEY-DAW-FILTER] NOTE -> PIANOTEQ mode={mode} active={active}")
+                        print(f"[LAUNCHKEY-DAW-FILTER] NOTE -> PIANOTEQ mode={mode} shift={octave_shift} active={active}")
                 _handle_pressed_feedback(daw_outport, "NOTE", msg.note, rule, is_on)
                 return
             elif rtype == "PIANOTEQ_PRESET":
@@ -812,11 +826,12 @@ def filter_and_translate_launchkey_daw_msg(msg, daw_outport, state_manager, verb
             elif rtype == "PIANOTEQ":
                 if is_on:
                     mode = rule.get("mode")
-                    active = state_manager.set_pianoteq_mode(mode)
+                    octave_shift = rule.get("octave_shift", 0)
+                    active = state_manager.set_pianoteq_mode(mode, octave_shift)
                     color = rule.get("color_on", rule.get("color")) if active else rule.get("color_off", 0)
                     _send_color(daw_outport, "CC", msg.control, color, rule.get("colormode", "static"))
                     if verbose:
-                        print(f"[LAUNCHKEY-DAW-FILTER] CC {msg.control} -> PIANOTEQ mode={mode} active={active}")
+                        print(f"[LAUNCHKEY-DAW-FILTER] CC {msg.control} -> PIANOTEQ mode={mode} shift={octave_shift} active={active}")
                 _handle_pressed_feedback(daw_outport, "CC", msg.control, rule, is_on)
                 return
             elif rtype == "PIANOTEQ_PRESET":
